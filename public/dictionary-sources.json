@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/Roman-/dicts",
+  "original": {
+    "easy": "rus_orange_easy.txt",
+    "normal": "rus_orange_optimus.txt",
+    "hard": "rus_orange_brainstorm.txt"
+  },
+  "fresh": {
+    "source": "rus_custom_15kfun.txt",
+    "excludes": "rus_orange_brainstorm.txt",
+    "normalization": "lowercase, ё → е",
+    "minLength": 5,
+    "maxLength": 26
+  }
+}
