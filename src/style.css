@@ -72,6 +72,8 @@ p {
   margin: 0;
 }
 h1 {
+  overflow-wrap: anywhere;
+  max-width: 100%;
   font-size: clamp(1.8rem, 3.5vw, 2.5rem);
   font-weight: 750;
   letter-spacing: -0.055em;
@@ -1201,4 +1203,8 @@ dialog > p {
     animation: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+.turn-heading > div:first-child {
+  min-width: 0;
 }

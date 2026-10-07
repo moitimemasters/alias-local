@@ -64,7 +64,7 @@ export function registerGameTools(c: Controller): () => void {
         required: ['names'],
         additionalProperties: false,
       },
-      annotations: { readOnlyHint: false },
+      annotations: { readOnlyHint: false, destructiveHint: true },
       execute: (input) => {
         if (
           !Array.isArray(input.names) ||
