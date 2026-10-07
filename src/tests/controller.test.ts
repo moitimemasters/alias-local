@@ -41,6 +41,47 @@ function harness() {
 }
 
 describe('controller lifecycle and storage', () => {
+  it('keeps editable setup preferences separate from an existing party', async () => {
+    const { controller } = harness();
+    await controller.initialize();
+    controller.start();
+    const game = controller.game;
+    if (!game) {
+      throw new Error('Party was not started');
+    }
+    const names = [...game.config.names];
+    const packs = [...game.config.packs];
+    controller.config.names[0] = 'Новая участница';
+    controller.config.packs.push('easy');
+    expect(controller.game?.config.names).toEqual(names);
+    expect(controller.game?.config.packs).toEqual(packs);
+  });
+  it('generates a distinct default name after removal and respects player limits', () => {
+    const { controller } = harness();
+    controller.config.names = ['Игрок 1', 'Игрок 3'];
+    controller.addPlayer();
+    expect(new Set(controller.config.names).size).toBe(3);
+    for (let i = 0; i < 20; i++) {
+      controller.addPlayer();
+    }
+    expect(controller.config.names).toHaveLength(12);
+    for (let i = 0; i < 20; i++) {
+      controller.removePlayer(0);
+    }
+    expect(controller.config.names).toHaveLength(2);
+  });
+
+  it('does not alter the party or preferences when a proposed game fails validation', async () => {
+    const { controller } = harness();
+    await controller.initialize();
+    controller.start();
+    const before = controller.game;
+    const names = [...controller.config.names];
+    controller.start({ ...controller.config, names: ['Анна', 'анна'] });
+    expect(controller.game).toBe(before);
+    expect(controller.config.names).toEqual(names);
+    expect(controller.error).toMatch(/отличаться/);
+  });
   it('recovers when the browser denies access to localStorage itself', () => {
     vi.stubGlobal('window', {
       get localStorage() {

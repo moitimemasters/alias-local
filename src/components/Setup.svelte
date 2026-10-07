@@ -1,6 +1,12 @@
 <script lang="ts">
   import { packs } from '../lib/dictionaries';
-  import { TURN_SECONDS, TARGET_SCORES } from '../lib/config';
+  import {
+    TURN_SECONDS,
+    TARGET_SCORES,
+    MIN_PLAYERS,
+    MAX_PLAYERS,
+    MAX_NAME_LENGTH,
+  } from '../lib/config';
   import { formatScore } from '../lib/presentation';
   import type { Controller } from '../lib/controller.svelte';
   import Icon from './Icon.svelte';
@@ -45,18 +51,15 @@
             </span>
             <input
               aria-label={`Имя игрока ${index + 1}`}
-              maxlength="24"
+              maxlength={MAX_NAME_LENGTH}
               bind:value={controller.config.names[index]}
               onchange={controller.savePreferences}
             />
             <button
               class="icon-button"
               aria-label={`Удалить игрока ${index + 1}`}
-              disabled={controller.config.names.length <= 2}
-              onclick={() => {
-                controller.config.names.splice(index, 1);
-                controller.savePreferences();
-              }}
+              disabled={controller.config.names.length <= MIN_PLAYERS}
+              onclick={() => controller.removePlayer(index)}
             >
               <Icon name="trash" size={18} />
             </button>
@@ -65,13 +68,8 @@
       </div>
       <button
         class="add-player"
-        disabled={controller.config.names.length >= 12}
-        onclick={() => {
-          controller.config.names.push(
-            `Игрок ${controller.config.names.length + 1}`,
-          );
-          controller.savePreferences();
-        }}
+        disabled={controller.config.names.length >= MAX_PLAYERS}
+        onclick={controller.addPlayer}
       >
         <Icon name="plus" />Добавить игрока
       </button>

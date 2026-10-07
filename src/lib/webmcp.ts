@@ -1,7 +1,15 @@
 import type { Controller } from './controller.svelte';
 import { explainerId } from './game';
 import { formatScore } from './presentation';
-import { validateGameConfig } from './config';
+import {
+  validateGameConfig,
+  PACK_IDS,
+  TURN_SECONDS,
+  TARGET_SCORES,
+  MIN_PLAYERS,
+  MAX_PLAYERS,
+  MAX_NAME_LENGTH,
+} from './config';
 interface Tool {
   name: string;
   description: string;
@@ -52,19 +60,19 @@ export function registerGameTools(controller: Controller): () => void {
         properties: {
           names: {
             type: 'array',
-            items: { type: 'string' },
-            minItems: 2,
-            maxItems: 12,
+            items: { type: 'string', minLength: 1, maxLength: MAX_NAME_LENGTH },
+            minItems: MIN_PLAYERS,
+            maxItems: MAX_PLAYERS,
           },
           packs: {
             type: 'array',
             items: {
               type: 'string',
-              enum: ['fresh', 'hard', 'normal', 'easy'],
+              enum: PACK_IDS,
             },
           },
-          seconds: { type: 'integer', enum: [30, 60, 90, 120] },
-          target: { type: 'integer', enum: [30, 60, 100] },
+          seconds: { type: 'integer', enum: TURN_SECONDS },
+          target: { type: 'integer', enum: TARGET_SCORES },
         },
         required: ['names'],
         additionalProperties: false,
@@ -77,10 +85,9 @@ export function registerGameTools(controller: Controller): () => void {
           seconds: input.seconds ?? controller.config.seconds,
           target: input.target ?? controller.config.target,
         });
-        Object.assign(controller.config, config);
-        controller.start();
+        controller.start(config);
         if (controller.error) {
-          throw Error(controller.error);
+          throw new Error(controller.error);
         }
         return read();
       },
@@ -136,14 +143,14 @@ export function registerGameTools(controller: Controller): () => void {
         ] as const;
         const action = actions.find((a) => a === input.action);
         if (!action) {
-          throw Error('Неизвестное действие.');
+          throw new Error('Неизвестное действие.');
         }
         if (action === 'guess') {
           if (
             typeof input.player !== 'number' ||
             !Number.isInteger(input.player)
           ) {
-            throw Error('Нужен player.');
+            throw new Error('Нужен player.');
           }
           controller.dispatch({
             type: 'guess',
@@ -158,7 +165,7 @@ export function registerGameTools(controller: Controller): () => void {
           controller.dispatch({ type: action });
         }
         if (controller.error) {
-          throw Error(controller.error);
+          throw new Error(controller.error);
         }
         return read();
       },

@@ -1,5 +1,6 @@
 import { reduceGame, type Entry, type GameState, type Player } from './game';
 import {
+  MAX_NAME_LENGTH,
   defaultConfig,
   validConfig,
   validateGameConfig,
@@ -19,7 +20,7 @@ function isPlayer(value: unknown, index: number): value is Player {
     value.id === index &&
     typeof value.name === 'string' &&
     value.name.trim().length > 0 &&
-    value.name.length <= 24 &&
+    value.name.length <= MAX_NAME_LENGTH &&
     Number.isSafeInteger(value.scoreUnits)
   );
 }

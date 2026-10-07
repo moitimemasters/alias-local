@@ -18,7 +18,7 @@ import {
   LEGACY_KEY,
   type LocalStorage,
 } from './persistence';
-import { defaultConfig } from './config';
+import { defaultConfig, MIN_PLAYERS, MAX_PLAYERS } from './config';
 import {
   collectWords,
   loadDictionaries,
@@ -124,12 +124,21 @@ export function createController(options: ControllerOptions = {}) {
     clock.release('picker');
   }
 
-  function start() {
+  function start(proposed: Config = config) {
     try {
       if (!dictionaries) {
         throw new Error('Словари ещё загружаются.');
       }
-      game = createGame(config, collectWords(dictionaries, config.packs));
+      const next = createGame(
+        proposed,
+        collectWords(dictionaries, proposed.packs),
+      );
+      Object.assign(config, {
+        ...next.config,
+        names: [...next.config.names],
+        packs: [...next.config.packs],
+      });
+      game = next;
       view = 'game';
       error = '';
       message = '';
@@ -139,6 +148,34 @@ export function createController(options: ControllerOptions = {}) {
     } catch (e) {
       error = e instanceof Error ? e.message : 'Не удалось начать игру.';
     }
+  }
+
+  function addPlayer() {
+    if (config.names.length >= MAX_PLAYERS) {
+      return;
+    }
+    const existing = config.names.map((name) =>
+      name.trim().toLocaleLowerCase('ru'),
+    );
+    let number = config.names.length + 1;
+    while (existing.includes(`игрок ${number}`)) {
+      number++;
+    }
+    config.names.push(`Игрок ${number}`);
+    save();
+  }
+
+  function removePlayer(index: number) {
+    if (
+      config.names.length <= MIN_PLAYERS ||
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= config.names.length
+    ) {
+      return;
+    }
+    config.names.splice(index, 1);
+    save();
   }
 
   function resume() {
@@ -250,6 +287,8 @@ export function createController(options: ControllerOptions = {}) {
       return clock.held;
     },
     start,
+    addPlayer,
+    removePlayer,
     resume,
     menu,
     dispatch,

@@ -40,6 +40,30 @@
       controller.start();
     }
   }
+  async function installApplication() {
+    try {
+      await installPrompt?.prompt();
+      installPrompt = null;
+    } catch {
+      controller.reportError(
+        'Не удалось открыть установку. Попробуйте через меню браузера.',
+      );
+    }
+  }
+
+  async function updateApplication() {
+    if (!controller.pauseForBackground()) {
+      return;
+    }
+    try {
+      await updateServiceWorker(true);
+    } catch {
+      controller.reportError(
+        'Не удалось применить обновление. Партия сохранена; попробуйте снова.',
+      );
+    }
+  }
+
   onMount(() => {
     void controller.initialize();
     const detach = controller.attach();
@@ -87,10 +111,7 @@
         <button
           class="icon-button"
           aria-label="Установить приложение"
-          onclick={async () => {
-            await installPrompt?.prompt();
-            installPrompt = null;
-          }}
+          onclick={installApplication}
         >
           <Icon name="download" />
         </button>
@@ -126,14 +147,7 @@
     {#if $needRefresh}
       <div class="update-banner">
         <span>Доступна новая версия.</span>
-        <button
-          class="text-button"
-          onclick={async () => {
-            if (controller.pauseForBackground()) {
-              await updateServiceWorker(true);
-            }
-          }}
-        >
+        <button class="text-button" onclick={updateApplication}>
           Обновить
         </button>
         <button
