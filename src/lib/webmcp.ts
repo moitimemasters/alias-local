@@ -18,38 +18,55 @@ interface Tool {
   execute: (input: Record<string, unknown>) => unknown;
 }
 interface ModelContext {
-  registerTool: (tool: Tool) => void;
+  registerTool: (tool: Tool) => void | Promise<void>;
   unregisterTool?: (name: string) => void;
 }
+const registrations = new WeakMap<
+  ModelContext,
+  { controller: Controller | null }
+>();
 /** Optional browser-native tools; the app does not require an agent or network service. */
-export function registerGameTools(controller: Controller): () => void {
+export function registerGameTools(initialController: Controller): () => void {
   const context = (document as Document & { modelContext?: ModelContext })
     .modelContext;
   if (!context) {
     return () => {};
   }
-  const read = () => ({
-    view: controller.view,
-    game: controller.game
-      ? {
-          phase: controller.game.phase,
-          word:
-            controller.game.phase === 'paused' ? null : controller.game.word,
-          players: controller.game.players.map((p) => ({
-            id: p.id,
-            name: p.name,
-            score: p.scoreUnits / 2,
-            displayScore: formatScore(p.scoreUnits),
-          })),
-          explainer: explainerId(controller.game),
-          remainingMs: controller.game.remainingMs,
-          remainingWords: controller.game.deck.length,
-          target: controller.game.config.target,
-          turn: controller.game.turn,
-          interactionPaused: controller.held,
-        }
-      : null,
-  });
+  const existing = registrations.get(context);
+  const registration = existing ?? { controller: initialController };
+  registration.controller = initialController;
+  registrations.set(context, registration);
+  function activeController() {
+    if (!registration.controller) {
+      throw new Error('Игра сейчас недоступна.');
+    }
+    return registration.controller;
+  }
+  const read = () => {
+    const controller = activeController();
+    return {
+      view: controller.view,
+      game: controller.game
+        ? {
+            phase: controller.game.phase,
+            word:
+              controller.game.phase === 'paused' ? null : controller.game.word,
+            players: controller.game.players.map((p) => ({
+              id: p.id,
+              name: p.name,
+              score: p.scoreUnits / 2,
+              displayScore: formatScore(p.scoreUnits),
+            })),
+            explainer: explainerId(controller.game),
+            remainingMs: controller.game.remainingMs,
+            remainingWords: controller.game.deck.length,
+            target: controller.game.config.target,
+            turn: controller.game.turn,
+            interactionPaused: controller.held,
+          }
+        : null,
+    };
+  };
   const tools: Tool[] = [
     {
       name: 'new_alias_game',
@@ -79,6 +96,7 @@ export function registerGameTools(controller: Controller): () => void {
       },
       annotations: { readOnlyHint: false, destructiveHint: true },
       execute: (input) => {
+        const controller = activeController();
         const config = validateGameConfig({
           names: input.names,
           packs: input.packs ?? controller.config.packs,
@@ -131,6 +149,7 @@ export function registerGameTools(controller: Controller): () => void {
       },
       annotations: { readOnlyHint: false },
       execute: (input) => {
+        const controller = activeController();
         const actions = [
           'begin',
           'pause',
@@ -171,12 +190,38 @@ export function registerGameTools(controller: Controller): () => void {
       },
     },
   ];
-  for (const tool of tools) {
-    context.registerTool(tool);
+  if (!existing) {
+    for (const tool of tools) {
+      void Promise.resolve()
+        .then(() => {
+          if (
+            registrations.get(context) !== registration ||
+            !registration.controller
+          ) {
+            return;
+          }
+          return context.registerTool(tool);
+        })
+        .catch((error: unknown) => {
+          console.warn('Could not register optional game tools.', error);
+        });
+    }
   }
   return () => {
-    for (const tool of tools) {
-      context.unregisterTool?.(tool.name);
+    if (registration.controller !== initialController) {
+      return;
     }
+    registration.controller = null;
+    if (!context.unregisterTool) {
+      return;
+    }
+    for (const tool of tools) {
+      context.unregisterTool(tool.name);
+    }
+    registrations.delete(context);
   };
+}
+if (import.meta.hot) {
+  // Tool descriptors cannot be replaced in browsers without unregisterTool.
+  import.meta.hot.accept(() => window.location.reload());
 }
