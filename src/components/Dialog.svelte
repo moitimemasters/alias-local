@@ -41,15 +41,19 @@
   }
 
   onMount(() => {
-    dialog.showModal();
-    const action = dialog.querySelector<HTMLElement>(
-      '[data-initial-focus], .dialog-content button',
-    );
-    if (initialFocus === 'action' && action) {
-      action.focus();
-    } else {
-      heading.focus();
-    }
+    // Finish pointerup, implicit capture release and compatibility click first.
+    const opening = setTimeout(() => {
+      dialog.showModal();
+      const action = dialog.querySelector<HTMLElement>(
+        '[data-initial-focus], .dialog-content button',
+      );
+      if (initialFocus === 'action' && action) {
+        action.focus({ preventScroll: true });
+      } else {
+        heading.focus({ preventScroll: true });
+      }
+    }, 0);
+    return () => clearTimeout(opening);
   });
 </script>
 

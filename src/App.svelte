@@ -10,6 +10,7 @@
   import Ready from './components/Ready.svelte';
   import Rules from './components/Rules.svelte';
   import Icon from './components/Icon.svelte';
+  import Scoreboard from './components/Scoreboard.svelte';
   import Dialog from './components/Dialog.svelte';
   const controller = createController();
   const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW({
@@ -18,7 +19,12 @@
         'Не удалось подготовить офлайн-режим. Проверьте интернет и перезагрузите страницу.',
       ),
   });
-  let modal = $state<'rules' | 'replace' | 'end' | null>(null);
+  let modal = $state<'rules' | 'scores' | 'replace' | 'end' | null>(null);
+  const playing = $derived(
+    controller.view === 'game' &&
+      !!controller.game &&
+      ['playing', 'lastword', 'paused'].includes(controller.game.phase),
+  );
   let installPrompt = $state<BeforeInstallPromptEvent | null>(null);
   let standalone = $state(false);
   interface BeforeInstallPromptEvent extends Event {
@@ -90,7 +96,7 @@
   });
 </script>
 
-<div class="app-shell">
+<div class="app-shell" class:playing class:in-game={controller.view === 'game'}>
   <header>
     <button class="brand" aria-label="Алиас — меню" onclick={controller.menu}>
       <img
@@ -103,8 +109,11 @@
     </button>
     <nav aria-label="Навигация">
       {#if controller.view === 'game'}
-        <button class="text-button" onclick={controller.menu}>
+        <button class="text-button menu-button" onclick={controller.menu}>
           <Icon name="back" size={16} />В меню
+        </button>
+        <button class="text-button" onclick={() => openModal('scores')}>
+          Счёт
         </button>
       {/if}
       {#if installPrompt && !standalone}
@@ -183,14 +192,18 @@
   <Dialog
     title={modal === 'rules'
       ? 'Правила'
-      : modal === 'replace'
-        ? 'Начать новую игру?'
-        : 'Закончить ход?'}
+      : modal === 'scores'
+        ? 'Счёт игроков'
+        : modal === 'replace'
+          ? 'Начать новую игру?'
+          : 'Закончить ход?'}
     close={closeModal}
     initialFocus={modal === 'rules' ? 'heading' : 'action'}
   >
     {#if modal === 'rules'}
       <Rules offlineReady={$offlineReady} />
+    {:else if modal === 'scores' && controller.game}
+      <Scoreboard game={controller.game} full />
     {:else if modal === 'replace'}
       <p>Текущая сохранённая партия будет заменена.</p>
       <div class="dialog-actions">

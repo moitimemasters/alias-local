@@ -100,7 +100,7 @@
       style:width={`${(game.remainingMs / (game.config.seconds * 1000)) * 100}%`}
     ></span>
   </div>
-  <Scoreboard {game} />
+  <div class="turn-scores"><Scoreboard {game} /></div>
   <div class="play-grid">
     <button
       class="word-card"
@@ -128,8 +128,19 @@
         {/if}
       </span>
     </button>
-    <div class="guesser-panel">
+    <div
+      class="guesser-panel"
+      class:many-players={eligiblePlayers.length > 6}
+      class:compact-picker={eligiblePlayers.length > 4}
+    >
       <h2>Кто угадал?</h2>
+      <button
+        class="primary mobile-picker"
+        disabled={paused}
+        onclick={controller.openPicker}
+      >
+        Угадали<Icon name="up" />
+      </button>
       <div class="guessers">
         {#each eligiblePlayers as player (player.id)}
           <button

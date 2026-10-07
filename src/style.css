@@ -54,15 +54,6 @@ a:focus-visible,
 summary:focus-visible {
   outline: 3px solid #b9a7ff;
 }
-button {
-  transition:
-    background 0.15s,
-    color 0.15s,
-    transform 0.15s;
-}
-button:active:not(:disabled) {
-  transform: translateY(1px);
-}
 svg {
   flex-shrink: 0;
 }
@@ -149,9 +140,6 @@ main {
   color: var(--ink);
   flex-shrink: 0;
 }
-.icon-button:hover {
-  background: #ebe7e0;
-}
 .text-button {
   display: inline-flex;
   align-items: center;
@@ -164,9 +152,6 @@ main {
   padding: 10px 4px;
   font-size: 0.875rem;
   white-space: nowrap;
-}
-.text-button:hover {
-  color: var(--ink);
 }
 .primary {
   display: flex;
@@ -182,9 +167,6 @@ main {
   font-weight: 650;
   font-size: 1rem;
 }
-.primary:hover {
-  background: #5835d4;
-}
 .secondary {
   display: inline-flex;
   justify-content: center;
@@ -198,8 +180,34 @@ main {
   padding: 12px 18px;
   font-size: 0.9rem;
 }
-.secondary:hover {
-  background: #efebe4;
+@media (hover: hover) and (pointer: fine) {
+  button {
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+  .icon-button:hover {
+    background: #ebe7e0;
+  }
+  .text-button:hover {
+    color: var(--ink);
+  }
+  .primary:hover {
+    background: #5835d4;
+  }
+  .secondary:hover {
+    background: #efebe4;
+  }
+  .add-player:hover {
+    background: var(--accent-light);
+  }
+  .word-card:hover:not(:disabled) {
+    background: #6140e0;
+  }
+  .guesser:hover:not(:disabled) {
+    border-color: #baa8f2;
+    background: #f2edff;
+  }
 }
 /* Game setup */
 .page-title {
@@ -299,9 +307,6 @@ main {
   margin-top: 12px;
   font-size: 0.9rem;
   font-weight: 600;
-}
-.add-player:hover {
-  background: var(--accent-light);
 }
 .scoring-note {
   display: flex;
@@ -643,9 +648,6 @@ main {
   user-select: none;
   overflow: hidden;
 }
-.word-card:hover:not(:disabled) {
-  background: #6140e0;
-}
 .word-label {
   text-transform: uppercase;
   font-size: 0.65rem;
@@ -729,10 +731,6 @@ main {
   font-weight: 650;
   margin-left: auto;
 }
-.guesser:hover:not(:disabled) {
-  border-color: #baa8f2;
-  background: #f2edff;
-}
 .guesser-panel .functional-note {
   margin-top: 14px;
 }
@@ -757,6 +755,9 @@ main {
   font-size: 0.8rem;
   line-height: 1.5;
   overflow-wrap: anywhere;
+}
+.mobile-picker {
+  display: none;
 }
 /* Turn and game results */
 .results-view {
@@ -1198,6 +1199,245 @@ dialog::backdrop {
   }
   .resume-card small {
     font-size: 0.7rem;
+  }
+}
+/* A turn fits the phone viewport; scores are available from the header. */
+@media (max-width: 1024px), (pointer: coarse), (max-height: 500px) {
+  .in-game header {
+    height: 48px;
+  }
+  .in-game main {
+    padding-top: 12px;
+  }
+  .in-game .menu-button {
+    display: none;
+  }
+  .ready-view {
+    margin: 0 auto;
+    gap: 12px;
+  }
+  .ready-view .avatar.large {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+    border-radius: 20px;
+  }
+  .ready-view .scoreboard {
+    display: none;
+  }
+  .app-shell.playing {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .playing header {
+    height: 48px;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  .playing header nav {
+    gap: 8px;
+  }
+  .playing .menu-button {
+    display: none;
+  }
+  .playing .brand {
+    font-size: 1.1rem;
+    gap: 8px;
+  }
+  .playing .brand img {
+    width: 28px;
+    height: 28px;
+  }
+  .playing main {
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-top: 8px;
+  }
+  .play-view {
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .turn-heading {
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .turn-heading h1 {
+    font-size: 1.1rem;
+    margin-top: 0;
+    line-height: 1.2;
+  }
+  .turn-heading h1 span {
+    display: none;
+  }
+  .turn-heading .eyebrow {
+    font-size: 0.65rem;
+  }
+  .timer {
+    font-size: 1.65rem;
+  }
+  .timer-controls {
+    gap: 8px;
+  }
+  .pause-button {
+    width: 44px;
+    height: 44px;
+  }
+  .turn-progress {
+    margin: 6px 0 0;
+    flex-shrink: 0;
+  }
+  .turn-scores {
+    display: none;
+  }
+  .play-grid {
+    min-height: 0;
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(112px, 1fr) auto;
+    gap: 8px;
+    margin: 8px 0;
+  }
+  .word-card {
+    min-height: 112px;
+    padding: 12px 16px;
+    border-radius: 20px;
+    gap: 8px;
+  }
+  .word,
+  .word-card.paused .word {
+    font-size: clamp(1.5rem, 7vw, 2.5rem);
+  }
+  .word-label {
+    font-size: 0.6rem;
+  }
+  .card-gesture {
+    font-size: 0.65rem;
+  }
+  .guesser-panel h2 {
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+  }
+  .guessers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .guesser {
+    min-height: 44px;
+    padding: 8px;
+    gap: 6px;
+    font-size: 0.8rem;
+    border-radius: 12px;
+  }
+  .guesser .avatar {
+    display: none;
+  }
+  .guesser strong {
+    font-size: 0.75rem;
+  }
+  .many-players h2,
+  .many-players > .guessers {
+    display: none;
+  }
+  .mobile-picker {
+    min-height: 44px;
+    padding: 10px 16px;
+    width: 100%;
+  }
+  .many-players .mobile-picker {
+    display: flex;
+  }
+  .guesser-panel .functional-note {
+    margin-top: 4px;
+    font-size: 0.7rem;
+  }
+  .play-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .play-actions .secondary {
+    min-height: 44px;
+    padding: 8px;
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+  .play-actions .text-button {
+    font-size: 0.7rem;
+    white-space: normal;
+    padding: 4px;
+    max-width: 60px;
+  }
+  .feedback {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    margin: 0;
+    padding: 0;
+  }
+  dialog {
+    padding: 16px;
+    max-height: calc(100dvh - 24px);
+  }
+  .dialog-heading {
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+  .dialog-heading .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+  .picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 0;
+  }
+  .picker .guesser {
+    min-height: 48px;
+  }
+  .picker .guesser strong {
+    display: none;
+  }
+}
+@media (max-width: 1024px) and (max-height: 650px) {
+  .compact-picker h2,
+  .compact-picker > .guessers {
+    display: none;
+  }
+  .compact-picker .mobile-picker {
+    display: flex;
+  }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  dialog {
+    padding: 12px;
+  }
+  .dialog-heading {
+    margin-bottom: 8px;
+  }
+  .picker {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .play-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    grid-template-rows: minmax(112px, 1fr);
+  }
+  .guesser-panel {
+    overflow-y: auto;
+  }
+  .guesser-panel .guesser {
+    min-height: 44px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
