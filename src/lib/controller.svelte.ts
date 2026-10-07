@@ -1,7 +1,9 @@
 import {
   createGame,
   reduceGame,
-  explainerId,
+  explainer,
+  getPlayer,
+  guessers,
   type Action,
   type Config,
   type GameState,
@@ -85,17 +87,17 @@ export function createController(options: ControllerOptions = {}) {
       return false;
     }
   }
+
   function dispatch(action: Action) {
     try {
       clock.flush();
-      if (!game) throw Error('Сначала начните игру.');
+      if (!game) throw new Error('Сначала начните игру.');
       game = reduceGame(game, action);
       clock.reset();
       error = '';
       if (action.type === 'guess')
-        message = `${game.players[action.player].name} +1 · ${game.players[explainerId(game)].name} +0,5`;
-      else if (action.type === 'skip')
-        message = `${game.players[explainerId(game)].name} −1`;
+        message = `${getPlayer(game, action.player).name} +1 · ${explainer(game).name} +0,5`;
+      else if (action.type === 'skip') message = `${explainer(game).name} −1`;
       else if (action.type === 'undo') message = 'Действие отменено';
       else message = '';
       if (game.phase === 'summary' || game.phase === 'finished') closePicker();
@@ -104,13 +106,15 @@ export function createController(options: ControllerOptions = {}) {
       error = e instanceof Error ? e.message : 'Не удалось выполнить действие.';
     }
   }
+
   function closePicker() {
     picker = false;
     clock.release('picker');
   }
+
   function start() {
     try {
-      if (!dictionaries) throw Error('Словари ещё загружаются.');
+      if (!dictionaries) throw new Error('Словари ещё загружаются.');
       game = createGame(config, collectWords(dictionaries, config.packs));
       view = 'game';
       error = '';
@@ -122,6 +126,7 @@ export function createController(options: ControllerOptions = {}) {
       error = e instanceof Error ? e.message : 'Не удалось начать игру.';
     }
   }
+
   function resume() {
     if (!game) return;
     view = 'game';
@@ -131,6 +136,7 @@ export function createController(options: ControllerOptions = {}) {
     message = '';
     save();
   }
+
   function pauseForBackground() {
     clock.flush();
     if (game) game = reduceGame(game, { type: 'pause' });
@@ -138,19 +144,23 @@ export function createController(options: ControllerOptions = {}) {
     clock.clearInputHolds();
     return save();
   }
+
   function menu() {
     if (pauseForBackground()) view = 'setup';
   }
+
   function openPicker() {
     if (!game || !['playing', 'lastword'].includes(game.phase)) return;
-    const eligible = game.players.filter((p) => p.id !== explainerId(game!));
-    if (eligible.length === 1) {
-      dispatch({ type: 'guess', player: eligible[0].id });
+    const eligible = guessers(game);
+    const [onlyGuesser] = eligible;
+    if (eligible.length === 1 && onlyGuesser) {
+      dispatch({ type: 'guess', player: onlyGuesser.id });
       return;
     }
     clock.hold('picker');
     picker = true;
   }
+
   async function initialize() {
     loading = true;
     try {
@@ -162,6 +172,7 @@ export function createController(options: ControllerOptions = {}) {
     }
     loading = false;
   }
+
   function attach() {
     const tick = setInterval(() => {
       const wasPlaying = game?.phase === 'playing';
@@ -179,6 +190,7 @@ export function createController(options: ControllerOptions = {}) {
       clock.clear();
     };
   }
+
   return {
     get game() {
       return game;

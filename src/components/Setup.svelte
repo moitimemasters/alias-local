@@ -1,11 +1,11 @@
 <script lang="ts">
   import { packs } from '../lib/dictionaries';
   import { TURN_SECONDS, TARGET_SCORES } from '../lib/config';
-  import { score } from '../lib/game';
+  import { formatScore } from '../lib/presentation';
   import type { Controller } from '../lib/controller.svelte';
   import Icon from './Icon.svelte';
   let {
-    controller: c,
+    controller,
     requestStart,
   }: { controller: Controller; requestStart: () => void } = $props();
 </script>
@@ -14,18 +14,18 @@
   <div class="page-title">
     <h1>Новая игра</h1>
     <span class="count-note">
-      {c.config.names.length}
-      {c.config.names.length <= 4 ? 'игрока' : 'игроков'}
+      {controller.config.names.length}
+      {controller.config.names.length <= 4 ? 'игрока' : 'игроков'}
     </span>
   </div>
-  {#if c.game && c.game.phase !== 'finished'}
-    <button class="resume-card" onclick={c.resume}>
+  {#if controller.game && controller.game.phase !== 'finished'}
+    <button class="resume-card" onclick={controller.resume}>
       <span class="resume-icon"><Icon name="play" size={24} /></span>
       <span>
         <strong>Продолжить игру</strong>
         <small>
-          {c.game.players
-            .map((p) => `${p.name}: ${score(p.scoreUnits)}`)
+          {controller.game.players
+            .map((p) => `${p.name}: ${formatScore(p.scoreUnits)}`)
             .join(' · ')}
         </small>
       </span>
@@ -38,7 +38,7 @@
         <h2>Игроки</h2>
       </div>
       <div class="players-list">
-        {#each c.config.names as name, index}
+        {#each controller.config.names as name, index}
           <div class="player-input">
             <span class="avatar color-{index % 4}" aria-hidden="true">
               {name.slice(0, 1).toUpperCase() || index + 1}
@@ -46,16 +46,16 @@
             <input
               aria-label={`Имя игрока ${index + 1}`}
               maxlength="24"
-              bind:value={c.config.names[index]}
-              onchange={c.savePreferences}
+              bind:value={controller.config.names[index]}
+              onchange={controller.savePreferences}
             />
             <button
               class="icon-button"
               aria-label={`Удалить игрока ${index + 1}`}
-              disabled={c.config.names.length <= 2}
+              disabled={controller.config.names.length <= 2}
               onclick={() => {
-                c.config.names.splice(index, 1);
-                c.savePreferences();
+                controller.config.names.splice(index, 1);
+                controller.savePreferences();
               }}
             >
               <Icon name="trash" size={18} />
@@ -65,10 +65,12 @@
       </div>
       <button
         class="add-player"
-        disabled={c.config.names.length >= 12}
+        disabled={controller.config.names.length >= 12}
         onclick={() => {
-          c.config.names.push(`Игрок ${c.config.names.length + 1}`);
-          c.savePreferences();
+          controller.config.names.push(
+            `Игрок ${controller.config.names.length + 1}`,
+          );
+          controller.savePreferences();
         }}
       >
         <Icon name="plus" />Добавить игрока
@@ -94,19 +96,23 @@
       </div>
       <div class="packs">
         {#each packs as pack}
-          <label class="pack" class:selected={c.config.packs.includes(pack.id)}>
+          <label
+            class="pack"
+            class:selected={controller.config.packs.includes(pack.id)}
+          >
             <input
               type="checkbox"
               value={pack.id}
-              bind:group={c.config.packs}
-              onchange={c.savePreferences}
+              bind:group={controller.config.packs}
+              onchange={controller.savePreferences}
             />
             <span class="pack-content">
               <strong>{pack.name}</strong>
               <small>{pack.detail}</small>
               <span class="pack-count">
-                {c.dictionaries?.[pack.id].length.toLocaleString('ru-RU') ??
-                  '…'} слов
+                {controller.dictionaries?.[pack.id].length.toLocaleString(
+                  'ru-RU',
+                ) ?? '…'} слов
               </span>
             </span>
             <span class="pack-check"><Icon name="check" size={14} /></span>
@@ -118,10 +124,10 @@
         <div class="segments">
           {#each TURN_SECONDS as seconds}
             <button
-              aria-pressed={c.config.seconds === seconds}
+              aria-pressed={controller.config.seconds === seconds}
               onclick={() => {
-                c.config.seconds = seconds;
-                c.savePreferences();
+                controller.config.seconds = seconds;
+                controller.savePreferences();
               }}
             >
               {seconds}
@@ -135,10 +141,10 @@
         <div class="segments">
           {#each TARGET_SCORES as target}
             <button
-              aria-pressed={c.config.target === target}
+              aria-pressed={controller.config.target === target}
               onclick={() => {
-                c.config.target = target;
-                c.savePreferences();
+                controller.config.target = target;
+                controller.savePreferences();
               }}
             >
               {target}
@@ -152,10 +158,12 @@
   <div class="setup-action">
     <button
       class="primary"
-      disabled={c.loading || !c.dictionaries}
+      disabled={controller.loading || !controller.dictionaries}
       onclick={requestStart}
     >
-      {c.loading ? 'Загружаем слова…' : 'Начать игру'}<Icon name="arrow" />
+      {controller.loading ? 'Загружаем слова…' : 'Начать игру'}<Icon
+        name="arrow"
+      />
     </button>
   </div>
 </div>

@@ -1,5 +1,6 @@
 import type { Controller } from './controller.svelte';
-import { explainerId, score } from './game';
+import { explainerId } from './game';
+import { formatScore } from './presentation';
 import { validateGameConfig } from './config';
 interface Tool {
   name: string;
@@ -13,28 +14,29 @@ interface ModelContext {
   unregisterTool: (name: string) => void;
 }
 /** Optional browser-native tools; the app does not require an agent or network service. */
-export function registerGameTools(c: Controller): () => void {
+export function registerGameTools(controller: Controller): () => void {
   const context = (document as Document & { modelContext?: ModelContext })
     .modelContext;
   if (!context) return () => {};
   const read = () => ({
-    view: c.view,
-    game: c.game
+    view: controller.view,
+    game: controller.game
       ? {
-          phase: c.game.phase,
-          word: c.game.phase === 'paused' ? null : c.game.word,
-          players: c.game.players.map((p) => ({
+          phase: controller.game.phase,
+          word:
+            controller.game.phase === 'paused' ? null : controller.game.word,
+          players: controller.game.players.map((p) => ({
             id: p.id,
             name: p.name,
             score: p.scoreUnits / 2,
-            displayScore: score(p.scoreUnits),
+            displayScore: formatScore(p.scoreUnits),
           })),
-          explainer: explainerId(c.game),
-          remainingMs: c.game.remainingMs,
-          remainingWords: c.game.deck.length,
-          target: c.game.config.target,
-          turn: c.game.turn,
-          interactionPaused: c.held,
+          explainer: explainerId(controller.game),
+          remainingMs: controller.game.remainingMs,
+          remainingWords: controller.game.deck.length,
+          target: controller.game.config.target,
+          turn: controller.game.turn,
+          interactionPaused: controller.held,
         }
       : null,
   });
@@ -69,13 +71,13 @@ export function registerGameTools(c: Controller): () => void {
       execute: (input) => {
         const config = validateGameConfig({
           names: input.names,
-          packs: input.packs ?? c.config.packs,
-          seconds: input.seconds ?? c.config.seconds,
-          target: input.target ?? c.config.target,
+          packs: input.packs ?? controller.config.packs,
+          seconds: input.seconds ?? controller.config.seconds,
+          target: input.target ?? controller.config.target,
         });
-        Object.assign(c.config, config);
-        c.start();
-        if (c.error) throw Error(c.error);
+        Object.assign(controller.config, config);
+        controller.start();
+        if (controller.error) throw Error(controller.error);
         return read();
       },
     },
@@ -131,14 +133,23 @@ export function registerGameTools(c: Controller): () => void {
         const action = actions.find((a) => a === input.action);
         if (!action) throw Error('Неизвестное действие.');
         if (action === 'guess') {
-          if (!Number.isInteger(input.player)) throw Error('Нужен player.');
-          c.dispatch({ type: 'guess', player: input.player as number });
-        } else if (action === 'resume' && c.view === 'setup') c.resume();
+          if (
+            typeof input.player !== 'number' ||
+            !Number.isInteger(input.player)
+          )
+            throw Error('Нужен player.');
+          controller.dispatch({
+            type: 'guess',
+            player: input.player,
+          });
+        } else if (action === 'resume' && controller.view === 'setup')
+          controller.resume();
         else {
-          if (action === 'begin' && c.view === 'setup') c.resume();
-          c.dispatch({ type: action });
+          if (action === 'begin' && controller.view === 'setup')
+            controller.resume();
+          controller.dispatch({ type: action });
         }
-        if (c.error) throw Error(c.error);
+        if (controller.error) throw Error(controller.error);
         return read();
       },
     },

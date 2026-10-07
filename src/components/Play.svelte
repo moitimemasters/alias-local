@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { explainerId, isActive, type GameState } from '../lib/game';
+  import { explainer, guessers, isActive, type GameState } from '../lib/game';
+  import { formatTime } from '../lib/presentation';
   import { WordGesture } from '../lib/word-gesture';
   import type { Controller } from '../lib/controller.svelte';
   import Scoreboard from './Scoreboard.svelte';
   import Icon from './Icon.svelte';
   let {
-    controller: c,
+    controller,
     game,
     requestEnd,
   }: {
@@ -13,6 +14,8 @@
     game: GameState;
     requestEnd: () => void;
   } = $props();
+  const explaining = $derived(explainer(game));
+  const eligiblePlayers = $derived(guessers(game));
   let paused = $derived(game.phase === 'paused');
   let lastWord = $derived(
     game.phase === 'lastword' || (paused && game.resumePhase === 'lastword'),
@@ -33,8 +36,8 @@
       return;
     }
     const direction = gesture.end(event);
-    if (direction === 'up') c.openPicker();
-    if (direction === 'down') c.dispatch({ type: 'skip' });
+    if (direction === 'up') controller.openPicker();
+    if (direction === 'down') controller.dispatch({ type: 'skip' });
   }
 
   function cancelSwipe(event: PointerEvent) {
@@ -42,7 +45,7 @@
   }
 
   function chooseGuesser(event: MouseEvent) {
-    if (!gesture.consumeClick(event)) c.openPicker();
+    if (!gesture.consumeClick(event)) controller.openPicker();
   }
 </script>
 
@@ -54,7 +57,7 @@
           .target}
       </span>
       <h1>
-        {game.players[explainerId(game)].name}
+        {explaining.name}
         <span>объясняет</span>
       </h1>
     </div>
@@ -64,15 +67,14 @@
         class:urgent={seconds <= 10 && !paused}
         aria-label="Оставшееся время"
       >
-        {String(Math.floor(seconds / 60)).padStart(2, '0')}:{String(
-          seconds % 60,
-        ).padStart(2, '0')}
+        {formatTime(game.remainingMs)}
       </span>
       <button
         class="icon-button pause-button"
         aria-label={paused ? 'Продолжить' : 'Пауза'}
         aria-pressed={paused}
-        onclick={() => c.dispatch({ type: paused ? 'resume' : 'pause' })}
+        onclick={() =>
+          controller.dispatch({ type: paused ? 'resume' : 'pause' })}
       >
         <Icon name={paused ? 'play' : 'pause'} size={22} />
       </button>
@@ -121,11 +123,12 @@
     <div class="guesser-panel">
       <h2>Кто угадал?</h2>
       <div class="guessers">
-        {#each game.players.filter((p) => p.id !== explainerId(game)) as player (player.id)}
+        {#each eligiblePlayers as player (player.id)}
           <button
             class="guesser"
             disabled={paused}
-            onclick={() => c.dispatch({ type: 'guess', player: player.id })}
+            onclick={() =>
+              controller.dispatch({ type: 'guess', player: player.id })}
           >
             <span class="avatar color-{player.id % 4}">
               {player.name.slice(0, 1).toUpperCase()}
@@ -144,7 +147,7 @@
     <button
       class="secondary"
       disabled={paused}
-      onclick={() => c.dispatch({ type: 'skip' })}
+      onclick={() => controller.dispatch({ type: 'skip' })}
     >
       <Icon name="down" />Пропустить
       <span>−1</span>
@@ -152,11 +155,11 @@
     <button
       class="secondary"
       disabled={paused || !game.entries.length}
-      onclick={() => c.dispatch({ type: 'undo' })}
+      onclick={() => controller.dispatch({ type: 'undo' })}
     >
       <Icon name="undo" />Отменить
     </button>
     <button class="text-button" onclick={requestEnd}>Закончить ход</button>
   </div>
-  <div class="feedback" role="status">{c.message}</div>
+  <div class="feedback" role="status">{controller.message}</div>
 </div>

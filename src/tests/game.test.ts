@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createGame,
+  getPlayer,
   reduceGame,
   type GameState,
   type Action,
@@ -149,7 +150,7 @@ describe('local persistence', () => {
     expect(restored.word).toBe(game.word);
     expect(restored.players).toEqual(game.players);
     const resumed = act(restored, { type: 'resume' });
-    expect(act(resumed, { type: 'undo' }).players[0].scoreUnits).toBe(1);
+    expect(act(resumed, { type: 'undo' }).players[0]?.scoreUnits).toBe(1);
   });
   it('preserves ready, summary and last-word stages', () => {
     expect(decodeGame(encodeGame(make())).phase).toBe('ready');
@@ -189,18 +190,20 @@ describe('local persistence', () => {
       },
     };
     let game = decodeGame(JSON.stringify(legacy));
-    expect(game.players[0].scoreUnits).toBe(-1);
+    expect(game.players[0]?.scoreUnits).toBe(-1);
     game = act(game, { type: 'resume' });
     game = act(game, { type: 'undo' });
     game = act(game, { type: 'undo' });
     expect(game.players.map((p) => p.scoreUnits)).toEqual([0, 0]);
-    legacy.game.players[0].score = -1;
+    const firstPlayer = legacy.game.players[0];
+    if (!firstPlayer) throw new Error('Missing legacy fixture player');
+    firstPlayer.score = -1;
     delete (legacy.game.log[0] as { bonus?: number }).bonus;
-    expect(decodeGame(JSON.stringify(legacy)).entries[0].bonusUnits).toBe(0);
+    expect(decodeGame(JSON.stringify(legacy)).entries[0]?.bonusUnits).toBe(0);
   });
   it('rejects corrupted saves and keeps an error recoverable', () => {
-    const record = JSON.parse(encodeGame(make()));
-    record.game.players[0].scoreUnits = 0.5;
+    const record = { version: 2, game: make() };
+    getPlayer(record.game, 0).scoreUnits = 0.5;
     expect(() => decodeGame(JSON.stringify(record))).toThrow();
     expect(() => decodeGame('{broken')).toThrow();
     const loaded = loadLocal({

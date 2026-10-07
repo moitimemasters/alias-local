@@ -25,7 +25,7 @@ describe('snapshot boundary invariants', () => {
     [
       'duplicate deck',
       (record: ReturnType<typeof makeRecord>) => {
-        record.game.deck.push(record.game.deck[0]);
+        record.game.deck.push('кот', 'кот');
       },
     ],
     [
