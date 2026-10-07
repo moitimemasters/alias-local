@@ -19,7 +19,7 @@ interface Tool {
 }
 interface ModelContext {
   registerTool: (tool: Tool) => void;
-  unregisterTool: (name: string) => void;
+  unregisterTool?: (name: string) => void;
 }
 /** Optional browser-native tools; the app does not require an agent or network service. */
 export function registerGameTools(controller: Controller): () => void {
@@ -176,7 +176,7 @@ export function registerGameTools(controller: Controller): () => void {
   }
   return () => {
     for (const tool of tools) {
-      context.unregisterTool(tool.name);
+      context.unregisterTool?.(tool.name);
     }
   };
 }
