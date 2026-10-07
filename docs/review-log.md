@@ -126,6 +126,21 @@
   Development-браузер не сообщает ошибок/warnings, включая 12 игроков и имена
   длиной 24 символа на экране 320 × 568.
 
+## 9. Повторное ревью CI по результатам публикации
+
+- Первая публикация восьми этапов успешна, но GitHub сообщил о deprecated
+  Node 20 в Actions и предстоящей смене `ubuntu-latest`.
+- Исправление: официальные Actions обновлены по опубликованным релизам,
+  зафиксированы commit SHA; runner явно Ubuntu 24.04. Checkout не сохраняет
+  credentials, поскольку последующие шаги не выполняют git-операций.
+- Первичные источники: [checkout](https://github.com/actions/checkout/releases/tag/v7.0.1),
+  [setup-node](https://github.com/actions/setup-node/releases/tag/v7.0.0),
+  [upload-pages-artifact](https://github.com/actions/upload-pages-artifact/releases/tag/v5.0.0),
+  [deploy-pages](https://github.com/actions/deploy-pages/releases/tag/v5.0.1).
+- Проверка: формат и diff; окончательный результат определяется реальным
+  workflow с `npm ci`, полным `verify` и публикацией Pages. История выполнения
+  доступна в [GitHub Actions](https://github.com/moitimemasters/alias-local/actions/workflows/pages.yml).
+
 ## Итоговый браузерный проход
 
 - Production: одиночное нажатие на игрока даёт +1 ему и +0,5 объясняющему;
