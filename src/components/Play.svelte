@@ -46,27 +46,33 @@
 <div class="play-view">
   <div class="turn-heading">
     <div>
-      <span class="eyebrow"
-        >Круг {Math.floor(game.turn / game.players.length) + 1} · до {game
-          .config.target}</span
-      >
-      <h1>{game.players[explainerId(game)].name}<span>объясняет</span></h1>
+      <span class="eyebrow">
+        Круг {Math.floor(game.turn / game.players.length) + 1} · до {game.config
+          .target}
+      </span>
+      <h1>
+        {game.players[explainerId(game)].name}
+        <span>объясняет</span>
+      </h1>
     </div>
     <div class="timer-controls">
       <span
         class="timer"
         class:urgent={seconds <= 10 && !paused}
         aria-label="Оставшееся время"
-        >{String(Math.floor(seconds / 60)).padStart(2, '0')}:{String(
+      >
+        {String(Math.floor(seconds / 60)).padStart(2, '0')}:{String(
           seconds % 60,
-        ).padStart(2, '0')}</span
-      ><button
+        ).padStart(2, '0')}
+      </span>
+      <button
         class="icon-button pause-button"
         aria-label={paused ? 'Продолжить' : 'Пауза'}
         aria-pressed={paused}
         onclick={() => c.dispatch({ type: paused ? 'resume' : 'pause' })}
-        ><Icon name={paused ? 'play' : 'pause'} size={22} /></button
       >
+        <Icon name={paused ? 'play' : 'pause'} size={22} />
+      </button>
     </div>
   </div>
   <div
@@ -104,15 +110,17 @@
         c.openPicker();
       }}
     >
-      <span class="word-label"
-        >{paused ? 'Пауза' : lastWord ? 'Последнее слово' : 'Слово'}</span
-      >
+      <span class="word-label">
+        {paused ? 'Пауза' : lastWord ? 'Последнее слово' : 'Слово'}
+      </span>
       <span class="word">{paused ? 'Слово скрыто' : game.word}</span>
-      <span class="card-gesture"
-        >{#if paused}<Icon name="pause" size={32} />{:else}<span
-            ><Icon name="down" size={16} />Пропустить</span
-          ><span><Icon name="up" size={16} />Угадали</span>{/if}</span
-      >
+      <span class="card-gesture">
+        {#if paused}
+          <Icon name="pause" size={32} />{:else}
+          <span><Icon name="down" size={16} />Пропустить</span>
+          <span><Icon name="up" size={16} />Угадали</span>
+        {/if}
+      </span>
     </button>
     <div class="guesser-panel">
       <h2>Кто угадал?</h2>
@@ -122,15 +130,18 @@
             class="guesser"
             disabled={paused}
             onclick={() => c.dispatch({ type: 'guess', player: player.id })}
-            ><span class="avatar color-{player.id % 4}"
-              >{player.name.slice(0, 1).toUpperCase()}</span
-            ><span>{player.name}</span><strong>+1</strong></button
           >
+            <span class="avatar color-{player.id % 4}">
+              {player.name.slice(0, 1).toUpperCase()}
+            </span>
+            <span>{player.name}</span>
+            <strong>+1</strong>
+          </button>
         {/each}
       </div>
-      {#if lastWord}<p class="functional-note">
-          Доиграйте это слово без таймера.
-        </p>{/if}
+      {#if lastWord}
+        <p class="functional-note">Доиграйте это слово без таймера.</p>
+      {/if}
     </div>
   </div>
   <div class="play-actions">
@@ -138,13 +149,18 @@
       class="secondary"
       disabled={paused}
       onclick={() => c.dispatch({ type: 'skip' })}
-      ><Icon name="down" />Пропустить<span>−1</span></button
-    ><button
+    >
+      <Icon name="down" />Пропустить
+      <span>−1</span>
+    </button>
+    <button
       class="secondary"
       disabled={paused || !game.entries.length}
       onclick={() => c.dispatch({ type: 'undo' })}
-      ><Icon name="undo" />Отменить</button
-    ><button class="text-button" onclick={requestEnd}>Закончить ход</button>
+    >
+      <Icon name="undo" />Отменить
+    </button>
+    <button class="text-button" onclick={requestEnd}>Закончить ход</button>
   </div>
   <div class="feedback" role="status">{c.message}</div>
 </div>

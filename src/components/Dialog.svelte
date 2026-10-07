@@ -33,8 +33,10 @@
     <button
       class="icon-button"
       aria-label="Закрыть"
-      onclick={() => dialog.close()}><Icon name="close" /></button
+      onclick={() => dialog.close()}
     >
+      <Icon name="close" />
+    </button>
   </div>
   {@render children()}
 </dialog>

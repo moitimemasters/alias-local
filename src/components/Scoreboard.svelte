@@ -10,13 +10,14 @@
       class="score-player"
       class:explainer={!full && player.id === explainerId(game)}
     >
-      {#if full}<span class="place">{players.indexOf(player) + 1}</span>{/if}
-      <span class="avatar color-{player.id % 4}"
-        >{player.name.slice(0, 1).toUpperCase()}</span
-      >
-      <span class="player-name">{player.name}</span><strong
-        >{score(player.scoreUnits)}</strong
-      >
+      {#if full}
+        <span class="place">{players.indexOf(player) + 1}</span>
+      {/if}
+      <span class="avatar color-{player.id % 4}">
+        {player.name.slice(0, 1).toUpperCase()}
+      </span>
+      <span class="player-name">{player.name}</span>
+      <strong>{score(player.scoreUnits)}</strong>
     </div>
   {/each}
 </div>
