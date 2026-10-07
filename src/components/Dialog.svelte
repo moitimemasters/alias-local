@@ -15,6 +15,31 @@
   const headingId = $props.id();
   let dialog: HTMLDialogElement;
   let heading: HTMLHeadingElement;
+
+  function keepFocus(event: KeyboardEvent) {
+    if (event.key !== 'Tab') {
+      return;
+    }
+    const actions = dialog.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), a[href], [tabindex="0"]',
+    );
+    const first = actions[0];
+    const last = actions[actions.length - 1];
+    if (!first || !last) {
+      return;
+    }
+    if (
+      event.shiftKey &&
+      (document.activeElement === first || document.activeElement === heading)
+    ) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   onMount(() => {
     dialog.showModal();
     const action = dialog.querySelector<HTMLElement>(
@@ -31,6 +56,7 @@
 <dialog
   bind:this={dialog}
   aria-labelledby={headingId}
+  onkeydown={keepFocus}
   onclose={close}
   onclick={(e) => {
     if (e.target === dialog) {
