@@ -30,6 +30,15 @@ export class TurnClock {
     this.holds.clear();
     this.reset();
   }
+  /** Physical input can lose its release event; dialogs still own their holds. */
+  clearInputHolds() {
+    for (const reason of this.holds) {
+      if (reason.startsWith('pointer:') || reason.startsWith('key:')) {
+        this.holds.delete(reason);
+      }
+    }
+    this.reset();
+  }
   get held() {
     return this.holds.size > 0;
   }

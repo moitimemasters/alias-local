@@ -119,8 +119,7 @@
         <button
           class="text-button"
           onclick={async () => {
-            c.pauseForBackground();
-            await updateServiceWorker(true);
+            if (c.pauseForBackground()) await updateServiceWorker(true);
           }}
         >
           Обновить
