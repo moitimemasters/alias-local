@@ -67,7 +67,9 @@ describe('personal scores and turn transitions', () => {
   });
   it('finishes at 60 personal points, including the explainer half-point', () => {
     let game = act(make(), { type: 'begin' });
-    for (let i = 0; i < 60; i++) game = act(game, { type: 'guess', player: 1 });
+    for (let i = 0; i < 60; i++) {
+      game = act(game, { type: 'guess', player: 1 });
+    }
     expect(game.phase).toBe('summary');
     expect(game.players.map((p) => p.scoreUnits)).toEqual([60, 120, 0]);
     expect(act(game, { type: 'next' }).phase).toBe('finished');
@@ -196,7 +198,9 @@ describe('local persistence', () => {
     game = act(game, { type: 'undo' });
     expect(game.players.map((p) => p.scoreUnits)).toEqual([0, 0]);
     const firstPlayer = legacy.game.players[0];
-    if (!firstPlayer) throw new Error('Missing legacy fixture player');
+    if (!firstPlayer) {
+      throw new Error('Missing legacy fixture player');
+    }
     firstPlayer.score = -1;
     delete (legacy.game.log[0] as { bonus?: number }).bonus;
     expect(decodeGame(JSON.stringify(legacy)).entries[0]?.bonusUnits).toBe(0);

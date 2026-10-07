@@ -38,7 +38,7 @@
         <h2>Игроки</h2>
       </div>
       <div class="players-list">
-        {#each controller.config.names as name, index}
+        {#each controller.config.names as name, index (index)}
           <div class="player-input">
             <span class="avatar color-{index % 4}" aria-hidden="true">
               {name.slice(0, 1).toUpperCase() || index + 1}
@@ -95,7 +95,7 @@
         <h2>Словари</h2>
       </div>
       <div class="packs">
-        {#each packs as pack}
+        {#each packs as pack (pack.id)}
           <label
             class="pack"
             class:selected={controller.config.packs.includes(pack.id)}
@@ -122,7 +122,7 @@
       <div class="option-row">
         <h3>Время на ход</h3>
         <div class="segments">
-          {#each TURN_SECONDS as seconds}
+          {#each TURN_SECONDS as seconds (seconds)}
             <button
               aria-pressed={controller.config.seconds === seconds}
               onclick={() => {
@@ -139,7 +139,7 @@
       <div class="option-row">
         <h3>Играем до</h3>
         <div class="segments">
-          {#each TARGET_SCORES as target}
+          {#each TARGET_SCORES as target (target)}
             <button
               aria-pressed={controller.config.target === target}
               onclick={() => {

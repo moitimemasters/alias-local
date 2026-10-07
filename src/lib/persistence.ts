@@ -29,7 +29,9 @@ function isEntries(value: unknown, playerCount: number): value is Entry[] {
     Array.isArray(value) &&
     value.length <= MAX_SAVED_WORDS &&
     value.every((entry) => {
-      if (!isRecord(entry)) return false;
+      if (!isRecord(entry)) {
+        return false;
+      }
       const { word, explainer, guesser, bonusUnits } = entry;
       return (
         isWord(word) &&
@@ -51,8 +53,9 @@ function isEntries(value: unknown, playerCount: number): value is Entry[] {
 }
 
 function validate(value: unknown): GameState {
-  if (!isRecord(value) || value.version !== 2)
+  if (!isRecord(value) || value.version !== 2) {
     throw new Error('Сохранение повреждено.');
+  }
 
   let config: Config;
   try {
@@ -99,8 +102,9 @@ function validate(value: unknown): GameState {
       phase !== 'finished') ||
     !isEntries(entries, players.length) ||
     !isEntries(lastEntries, players.length)
-  )
+  ) {
     throw new Error('Сохранение повреждено.');
+  }
 
   if (phase === 'paused') {
     if (
@@ -137,12 +141,15 @@ function migrateLegacy(record: Record<string, unknown>): GameState {
   }
 
   const players = old.players.map((player) => {
-    if (!isRecord(player) || typeof player.score !== 'number')
+    if (!isRecord(player) || typeof player.score !== 'number') {
       throw new Error('Старое сохранение повреждено.');
+    }
     return { id: player.id, name: player.name, scoreUnits: player.score * 2 };
   });
   function migrateEntries(value: unknown) {
-    if (!Array.isArray(value)) throw new Error('Старое сохранение повреждено.');
+    if (!Array.isArray(value)) {
+      throw new Error('Старое сохранение повреждено.');
+    }
     return value.map((entry) => {
       if (
         !isRecord(entry) ||
@@ -182,9 +189,15 @@ function migrateLegacy(record: Record<string, unknown>): GameState {
 
 export function decodeGame(raw: string): GameState {
   const record: unknown = JSON.parse(raw);
-  if (!isRecord(record)) throw new Error('Неизвестный формат сохранения.');
-  if (record.version === 2) return validate(record.game);
-  if (record.version === 1) return migrateLegacy(record);
+  if (!isRecord(record)) {
+    throw new Error('Неизвестный формат сохранения.');
+  }
+  if (record.version === 2) {
+    return validate(record.game);
+  }
+  if (record.version === 1) {
+    return migrateLegacy(record);
+  }
   throw new Error('Неизвестный формат сохранения.');
 }
 
@@ -196,9 +209,9 @@ export function encodeGame(game: GameState): string {
 }
 
 export interface LocalStorage {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
 }
 
 export function loadLocal(storage: LocalStorage) {
@@ -224,7 +237,9 @@ export function loadLocal(storage: LocalStorage) {
     const raw = storage.getItem(CONFIG_KEY);
     if (raw) {
       const value: unknown = JSON.parse(raw);
-      if (!validConfig(value)) throw new Error('Настройки повреждены.');
+      if (!validConfig(value)) {
+        throw new Error('Настройки повреждены.');
+      }
       config = value;
     }
   } catch {

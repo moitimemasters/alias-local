@@ -11,8 +11,9 @@ export class TurnClock {
   }
   flush() {
     const current = this.now();
-    if (this.running() && !this.holds.size)
+    if (this.running() && !this.holds.size) {
       this.advance(Math.max(0, current - this.anchor));
+    }
     this.anchor = current;
   }
   hold(reason: string) {

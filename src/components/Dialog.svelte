@@ -20,8 +20,11 @@
     const action = dialog.querySelector<HTMLElement>(
       '[data-initial-focus], .dialog-content button',
     );
-    if (initialFocus === 'action' && action) action.focus();
-    else heading.focus();
+    if (initialFocus === 'action' && action) {
+      action.focus();
+    } else {
+      heading.focus();
+    }
   });
 </script>
 
@@ -37,8 +40,9 @@
         e.clientX > r.right ||
         e.clientY < r.top ||
         e.clientY > r.bottom
-      )
+      ) {
         dialog.close();
+      }
     }
   }}
 >

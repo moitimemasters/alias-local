@@ -24,7 +24,9 @@
   const gesture = new WordGesture();
 
   function beginSwipe(event: PointerEvent) {
-    if (!isActive(game) || !gesture.begin(event)) return;
+    if (!isActive(game) || !gesture.begin(event)) {
+      return;
+    }
     (event.currentTarget as HTMLButtonElement).setPointerCapture(
       event.pointerId,
     );
@@ -36,8 +38,12 @@
       return;
     }
     const direction = gesture.end(event);
-    if (direction === 'up') controller.openPicker();
-    if (direction === 'down') controller.dispatch({ type: 'skip' });
+    if (direction === 'up') {
+      controller.openPicker();
+    }
+    if (direction === 'down') {
+      controller.dispatch({ type: 'skip' });
+    }
   }
 
   function cancelSwipe(event: PointerEvent) {
@@ -45,7 +51,9 @@
   }
 
   function chooseGuesser(event: MouseEvent) {
-    if (!gesture.consumeClick(event)) controller.openPicker();
+    if (!gesture.consumeClick(event)) {
+      controller.openPicker();
+    }
   }
 </script>
 

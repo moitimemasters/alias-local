@@ -4,7 +4,9 @@ import { isDictionaries } from '../lib/dictionaries';
 const parsed: unknown = JSON.parse(
   readFileSync('public/dictionaries.json', 'utf8'),
 );
-if (!isDictionaries(parsed)) throw new Error('Invalid dictionary fixture');
+if (!isDictionaries(parsed)) {
+  throw new Error('Invalid dictionary fixture');
+}
 const data = parsed;
 it('ships all four complete Russian dictionaries and excludes Brainstorm from the fresh set', () => {
   expect(

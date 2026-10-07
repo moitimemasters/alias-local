@@ -12,22 +12,23 @@ function harness() {
   const records = new Map<string, string>();
   const storage: LocalStorage = {
     getItem: (key) => records.get(key) ?? null,
-    setItem: vi.fn((key, value) => {
+    setItem: vi.fn((key: string, value: string) => {
       records.set(key, value);
     }),
-    removeItem: vi.fn((key) => {
+    removeItem: vi.fn((key: string) => {
       records.delete(key);
     }),
   };
   const controller = createController({
     storage,
     now: () => now,
-    loadWords: async () => ({
-      fresh: ['кот', 'дом', 'лес'],
-      hard: ['море'],
-      normal: ['река'],
-      easy: ['луна'],
-    }),
+    loadWords: () =>
+      Promise.resolve({
+        fresh: ['кот', 'дом', 'лес'],
+        hard: ['море'],
+        normal: ['река'],
+        easy: ['луна'],
+      }),
   });
   return {
     controller,

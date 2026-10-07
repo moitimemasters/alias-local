@@ -30,7 +30,9 @@ export function isPackId(value: unknown): value is PackId {
 
 /** Preferences may contain unfinished names or an empty pack selection. */
 export function validConfig(value: unknown): value is Config {
-  if (!isRecord(value)) return false;
+  if (!isRecord(value)) {
+    return false;
+  }
 
   return (
     Array.isArray(value.names) &&
@@ -48,17 +50,23 @@ export function validConfig(value: unknown): value is Config {
 }
 
 export function validateGameConfig(value: unknown): Config {
-  if (!validConfig(value)) throw new Error('Проверьте настройки игры.');
+  if (!validConfig(value)) {
+    throw new Error('Проверьте настройки игры.');
+  }
 
   const names = value.names.map((name) => name.trim());
-  if (names.some((name) => !name)) throw new Error('Введите имена игроков.');
+  if (names.some((name) => !name)) {
+    throw new Error('Введите имена игроков.');
+  }
   if (
     new Set(names.map((name) => name.toLocaleLowerCase('ru'))).size !==
     names.length
   ) {
     throw new Error('Имена игроков должны отличаться.');
   }
-  if (!value.packs.length) throw new Error('Выберите хотя бы один словарь.');
+  if (!value.packs.length) {
+    throw new Error('Выберите хотя бы один словарь.');
+  }
 
   return { ...value, names, packs: [...value.packs] };
 }

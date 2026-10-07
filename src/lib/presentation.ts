@@ -10,7 +10,9 @@ export function formatTime(remainingMs: number): string {
 
 export function describeEntry(game: GameState, entry: Entry): string {
   const explaining = getPlayer(game, entry.explainer).name;
-  if (entry.guesser === null) return `${explaining} −1`;
+  if (entry.guesser === null) {
+    return `${explaining} −1`;
+  }
   const answer = `${getPlayer(game, entry.guesser).name} +1`;
   return entry.bonusUnits
     ? `${answer} · ${explaining} +${formatScore(entry.bonusUnits)}`

@@ -49,7 +49,7 @@
     <details>
       <summary>Слова этого хода</summary>
       <div class="turn-log">
-        {#each game.lastEntries as entry}
+        {#each game.lastEntries as entry, index (index)}
           <div>
             <span>{entry.word}</span>
             <small>

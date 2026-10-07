@@ -17,7 +17,9 @@ interface ModelContext {
 export function registerGameTools(controller: Controller): () => void {
   const context = (document as Document & { modelContext?: ModelContext })
     .modelContext;
-  if (!context) return () => {};
+  if (!context) {
+    return () => {};
+  }
   const read = () => ({
     view: controller.view,
     game: controller.game
@@ -77,7 +79,9 @@ export function registerGameTools(controller: Controller): () => void {
         });
         Object.assign(controller.config, config);
         controller.start();
-        if (controller.error) throw Error(controller.error);
+        if (controller.error) {
+          throw Error(controller.error);
+        }
         return read();
       },
     },
@@ -131,31 +135,41 @@ export function registerGameTools(controller: Controller): () => void {
           'next',
         ] as const;
         const action = actions.find((a) => a === input.action);
-        if (!action) throw Error('Неизвестное действие.');
+        if (!action) {
+          throw Error('Неизвестное действие.');
+        }
         if (action === 'guess') {
           if (
             typeof input.player !== 'number' ||
             !Number.isInteger(input.player)
-          )
+          ) {
             throw Error('Нужен player.');
+          }
           controller.dispatch({
             type: 'guess',
             player: input.player,
           });
-        } else if (action === 'resume' && controller.view === 'setup')
+        } else if (action === 'resume' && controller.view === 'setup') {
           controller.resume();
-        else {
-          if (action === 'begin' && controller.view === 'setup')
+        } else {
+          if (action === 'begin' && controller.view === 'setup') {
             controller.resume();
+          }
           controller.dispatch({ type: action });
         }
-        if (controller.error) throw Error(controller.error);
+        if (controller.error) {
+          throw Error(controller.error);
+        }
         return read();
       },
     },
   ];
-  for (const tool of tools) context.registerTool(tool);
+  for (const tool of tools) {
+    context.registerTool(tool);
+  }
   return () => {
-    for (const tool of tools) context.unregisterTool(tool.name);
+    for (const tool of tools) {
+      context.unregisterTool(tool.name);
+    }
   };
 }

@@ -34,9 +34,11 @@
     controller.release('modal');
   }
   function requestStart() {
-    if (controller.game && controller.game.phase !== 'finished')
+    if (controller.game && controller.game.phase !== 'finished') {
       openModal('replace');
-    else controller.start();
+    } else {
+      controller.start();
+    }
   }
   onMount(() => {
     void controller.initialize();
@@ -127,8 +129,9 @@
         <button
           class="text-button"
           onclick={async () => {
-            if (controller.pauseForBackground())
+            if (controller.pauseForBackground()) {
               await updateServiceWorker(true);
+            }
           }}
         >
           Обновить

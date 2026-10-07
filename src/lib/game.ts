@@ -48,7 +48,9 @@ export const reachedGoal = (game: GameState) =>
   game.players.some((p) => p.scoreUnits >= game.config.target * 2);
 export function getPlayer(game: GameState, id: number): Player {
   const player = game.players[id];
-  if (!player) throw new Error('Игрок не найден.');
+  if (!player) {
+    throw new Error('Игрок не найден.');
+  }
   return player;
 }
 
@@ -61,7 +63,9 @@ export function ranked(game: GameState): [Player, ...Player[]] {
   const [leader, ...others] = [...game.players].sort(
     (a, b) => b.scoreUnits - a.scoreUnits || a.id - b.id,
   );
-  if (!leader) throw new Error('В игре нет игроков.');
+  if (!leader) {
+    throw new Error('В игре нет игроков.');
+  }
   return [leader, ...others];
 }
 
@@ -72,15 +76,17 @@ export function createGame(
 ): GameState {
   const validated = validateGameConfig(config);
   const names = validated.names;
-  if (!words.length || !words.every(isWord))
+  if (!words.length || !words.every(isWord)) {
     throw new Error('Словарь пуст или повреждён.');
+  }
   const deck = [...new Set(words)];
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));
     const current = deck[i];
     const selected = deck[j];
-    if (current === undefined || selected === undefined)
+    if (current === undefined || selected === undefined) {
       throw new Error('Неверный источник случайных чисел.');
+    }
     deck[i] = selected;
     deck[j] = current;
   }
@@ -116,8 +122,9 @@ function draw(game: GameState): GameState {
 }
 
 function requirePhase(game: GameState, ...phases: Phase[]) {
-  if (!phases.includes(game.phase))
+  if (!phases.includes(game.phase)) {
     throw new Error('Это действие сейчас недоступно.');
+  }
 }
 
 function changedScores(
@@ -128,7 +135,9 @@ function changedScores(
   return game.players.map((player) => {
     let delta = 0;
     if (entry.guesser === null) {
-      if (player.id === entry.explainer) delta = -2;
+      if (player.id === entry.explainer) {
+        delta = -2;
+      }
     } else if (player.id === entry.guesser) {
       delta = 2;
     } else if (player.id === entry.explainer) {
@@ -151,10 +160,15 @@ export function reduceGame(game: GameState, action: Action): GameState {
         remainingMs: game.config.seconds * 1000,
       });
     case 'elapse': {
-      if (game.phase !== 'playing') return game;
-      if (!Number.isFinite(action.ms) || action.ms < 0)
+      if (game.phase !== 'playing') {
+        return game;
+      }
+      if (!Number.isFinite(action.ms) || action.ms < 0) {
         throw new Error('Неверное время.');
-      if (action.ms === 0) return game;
+      }
+      if (action.ms === 0) {
+        return game;
+      }
       const remainingMs = Math.max(0, game.remainingMs - action.ms);
       return {
         ...game,
@@ -163,7 +177,9 @@ export function reduceGame(game: GameState, action: Action): GameState {
       };
     }
     case 'pause':
-      if (!isActive(game)) return game;
+      if (!isActive(game)) {
+        return game;
+      }
       return {
         ...game,
         phase: 'paused',
@@ -182,9 +198,12 @@ export function reduceGame(game: GameState, action: Action): GameState {
         (!Number.isInteger(guesser) ||
           !game.players[guesser] ||
           guesser === explainer)
-      )
+      ) {
         throw new Error('Выберите угадавшего игрока.');
-      if (game.word === null) throw new Error('Нет текущего слова.');
+      }
+      if (game.word === null) {
+        throw new Error('Нет текущего слова.');
+      }
       const entry: Entry = {
         word: game.word,
         guesser,
@@ -203,7 +222,9 @@ export function reduceGame(game: GameState, action: Action): GameState {
     case 'undo': {
       requirePhase(game, 'playing', 'lastword');
       const entry = game.entries.at(-1);
-      if (!entry) throw new Error('Нечего отменять.');
+      if (!entry) {
+        throw new Error('Нечего отменять.');
+      }
       return {
         ...game,
         players: changedScores(game, entry, -1),

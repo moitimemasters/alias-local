@@ -45,7 +45,7 @@ export function createController(options: ControllerOptions = {}) {
     ? loadLocal(storage)
     : { game: null, config: defaultConfig(), error: storageError };
   let game = $state.raw<GameState | null>(initial.game);
-  let config = $state<Config>(initial.config);
+  const config = $state<Config>(initial.config);
   let view = $state<'setup' | 'game'>('setup');
   let dictionaries = $state.raw<Dictionaries | null>(null);
   let error = $state(initial.error);
@@ -55,7 +55,9 @@ export function createController(options: ControllerOptions = {}) {
   const clock = new TurnClock(
     () => view === 'game' && game?.phase === 'playing',
     (ms) => {
-      if (game) game = reduceGame(game, { type: 'elapse', ms });
+      if (game) {
+        game = reduceGame(game, { type: 'elapse', ms });
+      }
     },
     now,
   );
@@ -65,7 +67,9 @@ export function createController(options: ControllerOptions = {}) {
   function save() {
     savedAt = now();
     try {
-      if (!storage) throw new Error('Хранилище недоступно.');
+      if (!storage) {
+        throw new Error('Хранилище недоступно.');
+      }
       if (game && game !== savedGame) {
         if (game.phase === 'finished') {
           storage.removeItem(SAVE_KEY);
@@ -91,16 +95,24 @@ export function createController(options: ControllerOptions = {}) {
   function dispatch(action: Action) {
     try {
       clock.flush();
-      if (!game) throw new Error('Сначала начните игру.');
+      if (!game) {
+        throw new Error('Сначала начните игру.');
+      }
       game = reduceGame(game, action);
       clock.reset();
       error = '';
-      if (action.type === 'guess')
+      if (action.type === 'guess') {
         message = `${getPlayer(game, action.player).name} +1 · ${explainer(game).name} +0,5`;
-      else if (action.type === 'skip') message = `${explainer(game).name} −1`;
-      else if (action.type === 'undo') message = 'Действие отменено';
-      else message = '';
-      if (game.phase === 'summary' || game.phase === 'finished') closePicker();
+      } else if (action.type === 'skip') {
+        message = `${explainer(game).name} −1`;
+      } else if (action.type === 'undo') {
+        message = 'Действие отменено';
+      } else {
+        message = '';
+      }
+      if (game.phase === 'summary' || game.phase === 'finished') {
+        closePicker();
+      }
       save();
     } catch (e) {
       error = e instanceof Error ? e.message : 'Не удалось выполнить действие.';
@@ -114,7 +126,9 @@ export function createController(options: ControllerOptions = {}) {
 
   function start() {
     try {
-      if (!dictionaries) throw new Error('Словари ещё загружаются.');
+      if (!dictionaries) {
+        throw new Error('Словари ещё загружаются.');
+      }
       game = createGame(config, collectWords(dictionaries, config.packs));
       view = 'game';
       error = '';
@@ -128,9 +142,13 @@ export function createController(options: ControllerOptions = {}) {
   }
 
   function resume() {
-    if (!game) return;
+    if (!game) {
+      return;
+    }
     view = 'game';
-    if (game.phase === 'paused') game = reduceGame(game, { type: 'resume' });
+    if (game.phase === 'paused') {
+      game = reduceGame(game, { type: 'resume' });
+    }
     clock.clearInputHolds();
     error = '';
     message = '';
@@ -139,18 +157,24 @@ export function createController(options: ControllerOptions = {}) {
 
   function pauseForBackground() {
     clock.flush();
-    if (game) game = reduceGame(game, { type: 'pause' });
+    if (game) {
+      game = reduceGame(game, { type: 'pause' });
+    }
     closePicker();
     clock.clearInputHolds();
     return save();
   }
 
   function menu() {
-    if (pauseForBackground()) view = 'setup';
+    if (pauseForBackground()) {
+      view = 'setup';
+    }
   }
 
   function openPicker() {
-    if (!game || !['playing', 'lastword'].includes(game.phase)) return;
+    if (!game || !['playing', 'lastword'].includes(game.phase)) {
+      return;
+    }
     const eligible = guessers(game);
     const [onlyGuesser] = eligible;
     if (eligible.length === 1 && onlyGuesser) {
@@ -165,7 +189,9 @@ export function createController(options: ControllerOptions = {}) {
     loading = true;
     try {
       dictionaries = await loadWords();
-      if (error.startsWith('Не удалось загрузить слова.')) error = '';
+      if (error.startsWith('Не удалось загрузить слова.')) {
+        error = '';
+      }
     } catch {
       error =
         'Не удалось загрузить слова. Откройте приложение с интернетом и попробуйте снова.';
@@ -177,8 +203,12 @@ export function createController(options: ControllerOptions = {}) {
     const tick = setInterval(() => {
       const wasPlaying = game?.phase === 'playing';
       clock.flush();
-      if (wasPlaying && (game?.phase !== 'playing' || now() - savedAt >= 5000))
+      if (
+        wasPlaying &&
+        (game?.phase !== 'playing' || now() - savedAt >= 5000)
+      ) {
         save();
+      }
     }, 100);
     const detachInteractions = attachInteractionEvents(
       clock,

@@ -42,12 +42,15 @@ it('keeps every reachable phase serializable through a complete deterministic ga
         game = reduceGame(game, { type: 'begin' });
         break;
       case 'playing':
-        if (index % 7 === 0) game = reduceGame(game, { type: 'pause' });
-        else if (index % 5 === 0)
+        if (index % 7 === 0) {
+          game = reduceGame(game, { type: 'pause' });
+        } else if (index % 5 === 0) {
           game = reduceGame(game, { type: 'elapse', ms: 30000 });
-        else {
+        } else {
           const word = game.word;
-          if (!word) throw new Error('Active phase must have a word');
+          if (!word) {
+            throw new Error('Active phase must have a word');
+          }
           expect(seen.has(word)).toBe(false);
           seen.add(word);
           game = reduceGame(game, {
@@ -60,7 +63,9 @@ it('keeps every reachable phase serializable through a complete deterministic ga
         game = reduceGame(game, { type: 'resume' });
         break;
       case 'lastword':
-        if (!game.word) throw new Error('Last-word phase must have a word');
+        if (!game.word) {
+          throw new Error('Last-word phase must have a word');
+        }
         expect(seen.has(game.word)).toBe(false);
         seen.add(game.word);
         game = reduceGame(game, { type: 'skip' });

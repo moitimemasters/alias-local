@@ -24,9 +24,13 @@ export function isDictionaries(value: unknown): value is Dictionaries {
 
 export async function loadDictionaries(): Promise<Dictionaries> {
   const response = await fetch(`${import.meta.env.BASE_URL}dictionaries.json`);
-  if (!response.ok) throw Error('Не удалось загрузить словари.');
+  if (!response.ok) {
+    throw Error('Не удалось загрузить словари.');
+  }
   const data: unknown = await response.json();
-  if (!isDictionaries(data)) throw new Error('Словари повреждены.');
+  if (!isDictionaries(data)) {
+    throw new Error('Словари повреждены.');
+  }
   return data;
 }
 export const collectWords = (data: Dictionaries, selected: PackId[]) => [

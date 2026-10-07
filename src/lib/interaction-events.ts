@@ -27,7 +27,9 @@ export function attachInteractionEvents(
   }
 
   function clearInputs() {
-    for (const timeout of pending.values()) clearTimeout(timeout);
+    for (const timeout of pending.values()) {
+      clearTimeout(timeout);
+    }
     pending.clear();
     clock.clearInputHolds();
   }
@@ -38,7 +40,9 @@ export function attachInteractionEvents(
   }
 
   function visibility() {
-    if (documentTarget.hidden) background();
+    if (documentTarget.hidden) {
+      background();
+    }
   }
 
   const pointerDown = (event: Event) =>
