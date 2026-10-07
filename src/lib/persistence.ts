@@ -1,154 +1,211 @@
-import { reduceGame, type Config, type GameState, type PackId } from './game';
+import { reduceGame, type Entry, type GameState, type Player } from './game';
+import {
+  defaultConfig,
+  validConfig,
+  validateGameConfig,
+  type Config,
+} from './config';
+import { isRecord, isWord } from './validation';
+
+export { defaultConfig, validConfig } from './config';
 export const SAVE_KEY = 'alias-local-game-v2';
 export const CONFIG_KEY = 'alias-local-config-v2';
-const LEGACY_KEY = 'alias-personal-game-v1';
-const PACKS = ['fresh', 'hard', 'normal', 'easy'];
-const PHASES = ['ready', 'paused', 'summary', 'finished'];
-export const defaultConfig = (): Config => ({
-  names: ['Игрок 1', 'Игрок 2', 'Игрок 3'],
-  packs: ['fresh'],
-  seconds: 60,
-  target: 60,
-});
-export function validConfig(value: unknown): value is Config {
-  if (!value || typeof value !== 'object') return false;
-  const c = value as Config;
+export const LEGACY_KEY = 'alias-personal-game-v1';
+const MAX_SAVED_WORDS = 100_000;
+
+function isPlayer(value: unknown, index: number): value is Player {
   return (
-    Array.isArray(c.names) &&
-    c.names.length >= 2 &&
-    c.names.length <= 12 &&
-    c.names.every((n) => typeof n === 'string' && n.length <= 24) &&
-    Array.isArray(c.packs) &&
-    c.packs.every((p) => PACKS.includes(p)) &&
-    [30, 60, 90, 120].includes(c.seconds) &&
-    [30, 60, 100].includes(c.target)
+    isRecord(value) &&
+    value.id === index &&
+    typeof value.name === 'string' &&
+    value.name.trim().length > 0 &&
+    value.name.length <= 24 &&
+    Number.isSafeInteger(value.scoreUnits)
   );
 }
-function validate(value: unknown): GameState {
-  const g = value as GameState;
-  if (
-    !g ||
-    g.version !== 2 ||
-    !validConfig(g.config) ||
-    !g.config.packs.length ||
-    !PHASES.includes(g.phase) ||
-    !Number.isSafeInteger(g.turn) ||
-    g.turn < 0 ||
-    !Number.isFinite(g.remainingMs) ||
-    g.remainingMs < 0 ||
-    g.remainingMs > g.config.seconds * 1000 ||
-    !['playing', 'lastword'].includes(g.resumePhase) ||
-    typeof g.exhausted !== 'boolean' ||
-    !Array.isArray(g.players) ||
-    g.players.length !== g.config.names.length ||
-    g.players.some(
-      (p, id) =>
-        !p ||
-        p.id !== id ||
-        typeof p.name !== 'string' ||
-        !p.name.trim() ||
-        p.name.length > 24 ||
-        !Number.isSafeInteger(p.scoreUnits),
-    ) ||
-    new Set(g.players.map((p) => p.name.toLocaleLowerCase('ru'))).size !==
-      g.players.length ||
-    !Array.isArray(g.deck) ||
-    g.deck.length > 100000 ||
-    g.deck.some((w) => typeof w !== 'string' || !w || w.length > 100) ||
-    !(
-      g.word === null ||
-      (typeof g.word === 'string' && g.word.length > 0 && g.word.length <= 100)
-    )
-  )
-    throw Error('Сохранение повреждено.');
-  const validEntries = (list: GameState['entries']) =>
-    Array.isArray(list) &&
-    list.every(
-      (e) =>
-        e &&
-        typeof e.word === 'string' &&
-        e.word.length > 0 &&
-        Number.isInteger(e.explainer) &&
-        e.explainer >= 0 &&
-        e.explainer < g.players.length &&
-        (e.guesser === null ||
-          (Number.isInteger(e.guesser) &&
-            e.guesser >= 0 &&
-            e.guesser < g.players.length &&
-            e.guesser !== e.explainer)) &&
-        [0, 1].includes(e.bonusUnits) &&
-        (e.guesser !== null || e.bonusUnits === 0),
-    );
-  if (
-    !validEntries(g.entries) ||
-    !validEntries(g.lastEntries) ||
-    (g.phase === 'paused' &&
-      (!g.word || (g.resumePhase === 'lastword' && g.remainingMs !== 0)))
-  )
-    throw Error('Сохранённый ход повреждён.');
-  return g;
+
+function isEntries(value: unknown, playerCount: number): value is Entry[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= MAX_SAVED_WORDS &&
+    value.every((entry) => {
+      if (!isRecord(entry)) return false;
+      const { word, explainer, guesser, bonusUnits } = entry;
+      return (
+        isWord(word) &&
+        typeof explainer === 'number' &&
+        Number.isInteger(explainer) &&
+        explainer >= 0 &&
+        explainer < playerCount &&
+        (guesser === null ||
+          (typeof guesser === 'number' &&
+            Number.isInteger(guesser) &&
+            guesser >= 0 &&
+            guesser < playerCount &&
+            guesser !== explainer)) &&
+        (bonusUnits === 0 || bonusUnits === 1) &&
+        (guesser !== null || bonusUnits === 0)
+      );
+    })
+  );
 }
-export function decodeGame(raw: string): GameState {
-  const record = JSON.parse(raw);
-  if (record.version === 2) return validate(record.game);
-  if (record.version !== 1 || record.game?.version !== 1)
-    throw Error('Неизвестный формат сохранения.');
+
+function validate(value: unknown): GameState {
+  if (!isRecord(value) || value.version !== 2)
+    throw new Error('Сохранение повреждено.');
+
+  let config: Config;
+  try {
+    config = validateGameConfig(value.config);
+  } catch {
+    throw new Error('Настройки сохранения повреждены.');
+  }
+
+  const {
+    players,
+    deck,
+    word,
+    turn,
+    phase,
+    resumePhase,
+    remainingMs,
+    entries,
+    lastEntries,
+    exhausted,
+  } = value;
+  if (
+    !Array.isArray(players) ||
+    players.length !== config.names.length ||
+    !players.every(isPlayer) ||
+    players.some((player, index) => player.name !== config.names[index]) ||
+    !Array.isArray(deck) ||
+    deck.length > MAX_SAVED_WORDS ||
+    !deck.every(isWord) ||
+    new Set(deck).size !== deck.length ||
+    (word !== null && !isWord(word)) ||
+    (word !== null && deck.includes(word)) ||
+    typeof turn !== 'number' ||
+    !Number.isSafeInteger(turn) ||
+    turn < 0 ||
+    typeof remainingMs !== 'number' ||
+    !Number.isFinite(remainingMs) ||
+    remainingMs < 0 ||
+    remainingMs > config.seconds * 1000 ||
+    typeof exhausted !== 'boolean' ||
+    (resumePhase !== 'playing' && resumePhase !== 'lastword') ||
+    (phase !== 'ready' &&
+      phase !== 'paused' &&
+      phase !== 'summary' &&
+      phase !== 'finished') ||
+    !isEntries(entries, players.length) ||
+    !isEntries(lastEntries, players.length)
+  )
+    throw new Error('Сохранение повреждено.');
+
+  if (phase === 'paused') {
+    if (
+      word === null ||
+      exhausted ||
+      (resumePhase === 'playing' ? remainingMs === 0 : remainingMs !== 0)
+    ) {
+      throw new Error('Сохранённый ход поврежден.');
+    }
+  } else if (word !== null || (exhausted && phase === 'ready')) {
+    throw new Error('Сохранённый ход поврежден.');
+  }
+
+  return {
+    version: 2,
+    config,
+    players,
+    deck,
+    word,
+    turn,
+    phase,
+    resumePhase,
+    remainingMs,
+    entries,
+    lastEntries,
+    exhausted,
+  };
+}
+
+function migrateLegacy(record: Record<string, unknown>): GameState {
   const old = record.game;
-  const entries = (
-    list: {
-      word: string;
-      player: number | null;
-      explainer: number;
-      bonus?: number;
-    }[],
-  ) =>
-    list.map((e) => ({
-      word: e.word,
-      guesser: e.player,
-      explainer: e.explainer,
-      bonusUnits: (e.bonus ?? 0) * 2,
-    }));
+  if (!isRecord(old) || old.version !== 1 || !Array.isArray(old.players)) {
+    throw new Error('Старое сохранение повреждено.');
+  }
+
+  const players = old.players.map((player) => {
+    if (!isRecord(player) || typeof player.score !== 'number')
+      throw new Error('Старое сохранение повреждено.');
+    return { id: player.id, name: player.name, scoreUnits: player.score * 2 };
+  });
+  function migrateEntries(value: unknown) {
+    if (!Array.isArray(value)) throw new Error('Старое сохранение повреждено.');
+    return value.map((entry) => {
+      if (
+        !isRecord(entry) ||
+        (entry.bonus !== undefined && typeof entry.bonus !== 'number')
+      ) {
+        throw new Error('Старое сохранение повреждено.');
+      }
+      return {
+        word: entry.word,
+        guesser: entry.player,
+        explainer: entry.explainer,
+        bonusUnits: (entry.bonus ?? 0) * 2,
+      };
+    });
+  }
+
   return validate({
     version: 2,
     config: {
-      names: old.players.map((p: { name: string }) => p.name),
-      packs: record.selected as PackId[],
+      names: players.map((player) => player.name),
+      packs: record.selected,
       seconds: old.seconds,
       target: old.target,
     },
-    players: old.players.map(
-      (p: { id: number; name: string; score: number }) => ({
-        id: p.id,
-        name: p.name,
-        scoreUnits: p.score * 2,
-      }),
-    ),
+    players,
     deck: old.deck,
     turn: old.turn,
     phase: old.status,
     resumePhase: old.beforePause ?? 'playing',
     remainingMs: old.remaining,
     word: old.current,
-    entries: entries(old.log),
-    lastEntries: entries(old.lastLog),
+    entries: migrateEntries(old.log),
+    lastEntries: migrateEntries(old.lastLog),
     exhausted: old.exhausted,
   });
 }
+
+export function decodeGame(raw: string): GameState {
+  const record: unknown = JSON.parse(raw);
+  if (!isRecord(record)) throw new Error('Неизвестный формат сохранения.');
+  if (record.version === 2) return validate(record.game);
+  if (record.version === 1) return migrateLegacy(record);
+  throw new Error('Неизвестный формат сохранения.');
+}
+
 export function encodeGame(game: GameState): string {
   return JSON.stringify({
     version: 2,
     game: reduceGame(game, { type: 'pause' }),
   });
 }
+
 export interface LocalStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
 }
+
 export function loadLocal(storage: LocalStorage) {
-  let game: GameState | null = null,
-    config = defaultConfig(),
-    error = '';
+  let game: GameState | null = null;
+  let config = defaultConfig();
+  const errors: string[] = [];
+
   try {
     const raw = storage.getItem(SAVE_KEY) ?? storage.getItem(LEGACY_KEY);
     if (raw) {
@@ -159,13 +216,20 @@ export function loadLocal(storage: LocalStorage) {
         packs: [...game.config.packs],
       };
     }
-    const preferences = storage.getItem(CONFIG_KEY);
-    if (preferences) {
-      const value: unknown = JSON.parse(preferences);
-      if (validConfig(value)) config = value;
+  } catch {
+    errors.push('Не удалось прочитать сохранение. Можно начать новую игру.');
+  }
+
+  try {
+    const raw = storage.getItem(CONFIG_KEY);
+    if (raw) {
+      const value: unknown = JSON.parse(raw);
+      if (!validConfig(value)) throw new Error('Настройки повреждены.');
+      config = value;
     }
   } catch {
-    error = 'Не удалось прочитать сохранение. Можно начать новую игру.';
+    errors.push('Не удалось прочитать настройки.');
   }
-  return { game, config, error };
+
+  return { game, config, error: errors.join(' ') };
 }

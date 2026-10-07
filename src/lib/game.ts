@@ -1,10 +1,8 @@
-export type PackId = 'fresh' | 'hard' | 'normal' | 'easy';
-export interface Config {
-  names: string[];
-  packs: PackId[];
-  seconds: number;
-  target: number;
-}
+import { validateGameConfig, type Config } from './config';
+import { isWord } from './validation';
+
+export type { Config, PackId } from './config';
+
 export interface Player {
   id: number;
   name: string;
@@ -50,32 +48,18 @@ export function createGame(
   words: string[],
   random = Math.random,
 ): GameState {
-  const names = config.names.map((n) => n.trim());
-  if (
-    names.length < 2 ||
-    names.length > 12 ||
-    names.some((n) => !n || n.length > 24)
-  )
-    throw Error('Нужно от 2 до 12 игроков.');
-  if (
-    new Set(names.map((n) => n.toLocaleLowerCase('ru'))).size !== names.length
-  )
-    throw Error('Имена игроков должны отличаться.');
-  if (
-    ![30, 60, 90, 120].includes(config.seconds) ||
-    ![30, 60, 100].includes(config.target)
-  )
-    throw Error('Проверьте настройки игры.');
-  if (!config.packs.length) throw Error('Выберите хотя бы один словарь.');
+  const validated = validateGameConfig(config);
+  const names = validated.names;
+  if (!words.length || !words.every(isWord))
+    throw new Error('Словарь пуст или повреждён.');
   const deck = [...new Set(words)];
-  if (!deck.length) throw Error('Словарь пуст.');
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
   return {
     version: 2,
-    config: { ...config, names, packs: [...config.packs] },
+    config: validated,
     players: names.map((name, id) => ({ id, name, scoreUnits: 0 })),
     deck,
     turn: 0,

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { packs } from '../lib/dictionaries';
+  import { TURN_SECONDS, TARGET_SCORES } from '../lib/config';
   import { score } from '../lib/game';
   import type { Controller } from '../lib/controller.svelte';
   import Icon from './Icon.svelte';
@@ -115,7 +116,7 @@
       <div class="option-row">
         <h3>Время на ход</h3>
         <div class="segments">
-          {#each [30, 60, 90, 120] as seconds}
+          {#each TURN_SECONDS as seconds}
             <button
               aria-pressed={c.config.seconds === seconds}
               onclick={() => {
@@ -132,7 +133,7 @@
       <div class="option-row">
         <h3>Играем до</h3>
         <div class="segments">
-          {#each [30, 60, 100] as target}
+          {#each TARGET_SCORES as target}
             <button
               aria-pressed={c.config.target === target}
               onclick={() => {

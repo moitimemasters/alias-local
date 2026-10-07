@@ -1,5 +1,6 @@
 import type { Controller } from './controller.svelte';
 import { explainerId, score } from './game';
+import { validateGameConfig } from './config';
 interface Tool {
   name: string;
   description: string;
@@ -66,25 +67,13 @@ export function registerGameTools(c: Controller): () => void {
       },
       annotations: { readOnlyHint: false, destructiveHint: true },
       execute: (input) => {
-        if (
-          !Array.isArray(input.names) ||
-          input.names.some((n) => typeof n !== 'string')
-        )
-          throw Error('Нужны имена игроков.');
-        c.config.names = input.names as string[];
-        if (input.packs !== undefined) {
-          if (
-            !Array.isArray(input.packs) ||
-            input.packs.some(
-              (p) => !['fresh', 'hard', 'normal', 'easy'].includes(p),
-            )
-          )
-            throw Error('Неизвестный словарь.');
-          c.config.packs = input.packs as typeof c.config.packs;
-        }
-        if (input.seconds !== undefined)
-          c.config.seconds = Number(input.seconds);
-        if (input.target !== undefined) c.config.target = Number(input.target);
+        const config = validateGameConfig({
+          names: input.names,
+          packs: input.packs ?? c.config.packs,
+          seconds: input.seconds ?? c.config.seconds,
+          target: input.target ?? c.config.target,
+        });
+        Object.assign(c.config, config);
         c.start();
         if (c.error) throw Error(c.error);
         return read();

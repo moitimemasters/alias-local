@@ -1,9 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import type { Dictionaries } from '../lib/dictionaries';
-const data = JSON.parse(
+import { isDictionaries } from '../lib/dictionaries';
+const parsed: unknown = JSON.parse(
   readFileSync('public/dictionaries.json', 'utf8'),
-) as Dictionaries;
+);
+if (!isDictionaries(parsed)) throw new Error('Invalid dictionary fixture');
+const data = parsed;
 it('ships all four complete Russian dictionaries and excludes Brainstorm from the fresh set', () => {
   expect(
     Object.fromEntries(
@@ -14,4 +16,15 @@ it('ships all four complete Russian dictionaries and excludes Brainstorm from th
     word.toLocaleLowerCase('ru').replaceAll('ё', 'е');
   const old = new Set(data.hard.map(normalize));
   expect(data.fresh.some((word) => old.has(normalize(word)))).toBe(false);
+});
+
+it.each([
+  null,
+  [],
+  {},
+  { ...data, fresh: [] },
+  { ...data, easy: [' '] },
+  { ...data, hard: [42] },
+])('rejects malformed dictionary data: %j', (value) => {
+  expect(isDictionaries(value)).toBe(false);
 });
