@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ActionButton from './ActionButton.svelte';
   import { explainer, type GameState } from '../lib/game';
   import Scoreboard from './Scoreboard.svelte';
   import Icon from './Icon.svelte';
@@ -16,9 +17,9 @@
   </span>
   <h1>{explaining.name}</h1>
   <p>Передайте телефон объясняющему.</p>
-  <button class="primary" onclick={begin}>
+  <ActionButton class="primary" activate={begin}>
     Начать ход<Icon name="play" />
-  </button>
+  </ActionButton>
   <span class="functional-note">{game.config.seconds} секунд</span>
   <Scoreboard {game} />
 </section>

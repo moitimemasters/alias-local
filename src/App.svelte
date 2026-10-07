@@ -11,6 +11,7 @@
   import Rules from './components/Rules.svelte';
   import Icon from './components/Icon.svelte';
   import Scoreboard from './components/Scoreboard.svelte';
+  import ActionButton from './components/ActionButton.svelte';
   import Dialog from './components/Dialog.svelte';
   const controller = createController();
   const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW({
@@ -98,7 +99,11 @@
 
 <div class="app-shell" class:playing class:in-game={controller.view === 'game'}>
   <header>
-    <button class="brand" aria-label="Алиас — меню" onclick={controller.menu}>
+    <ActionButton
+      class="brand"
+      aria-label="Алиас — меню"
+      activate={controller.menu}
+    >
       <img
         src={`${import.meta.env.BASE_URL}icon.svg`}
         alt=""
@@ -106,32 +111,35 @@
         height="32"
       />
       <span>Алиас</span>
-    </button>
+    </ActionButton>
     <nav aria-label="Навигация">
       {#if controller.view === 'game'}
-        <button class="text-button menu-button" onclick={controller.menu}>
+        <ActionButton
+          class="text-button menu-button"
+          activate={controller.menu}
+        >
           <Icon name="back" size={16} />В меню
-        </button>
-        <button class="text-button" onclick={() => openModal('scores')}>
+        </ActionButton>
+        <ActionButton class="text-button" activate={() => openModal('scores')}>
           Счёт
-        </button>
+        </ActionButton>
       {/if}
       {#if installPrompt && !standalone}
-        <button
+        <ActionButton
           class="icon-button"
           aria-label="Установить приложение"
-          onclick={installApplication}
+          activate={installApplication}
         >
           <Icon name="download" />
-        </button>
+        </ActionButton>
       {/if}
-      <button
+      <ActionButton
         class="icon-button"
         aria-label="Правила"
-        onclick={() => openModal('rules')}
+        activate={() => openModal('rules')}
       >
         <Icon name="help" />
-      </button>
+      </ActionButton>
     </nav>
   </header>
   <main>
@@ -139,33 +147,36 @@
       <div class="error-banner" role="alert">
         <span>{controller.error}</span>
         {#if !controller.dictionaries && !controller.loading}
-          <button class="text-button" onclick={() => controller.initialize()}>
+          <ActionButton
+            class="text-button"
+            activate={() => controller.initialize()}
+          >
             Повторить
-          </button>
+          </ActionButton>
         {/if}
-        <button
+        <ActionButton
           class="icon-button"
           disabled={!controller.dictionaries && !controller.loading}
           aria-label="Закрыть ошибку"
-          onclick={controller.clearError}
+          activate={controller.clearError}
         >
           <Icon name="close" size={18} />
-        </button>
+        </ActionButton>
       </div>
     {/if}
     {#if $needRefresh}
       <div class="update-banner">
         <span>Доступна новая версия.</span>
-        <button class="text-button" onclick={updateApplication}>
+        <ActionButton class="text-button" activate={updateApplication}>
           Обновить
-        </button>
-        <button
+        </ActionButton>
+        <ActionButton
           class="icon-button"
           aria-label="Позже"
-          onclick={() => ($needRefresh = false)}
+          activate={() => ($needRefresh = false)}
         >
           <Icon name="close" size={18} />
-        </button>
+        </ActionButton>
       </div>
     {/if}
     {#if controller.view === 'setup'}
@@ -207,34 +218,42 @@
     {:else if modal === 'replace'}
       <p>Текущая сохранённая партия будет заменена.</p>
       <div class="dialog-actions">
-        <button class="secondary" data-initial-focus onclick={closeModal}>
+        <ActionButton
+          class="secondary"
+          data-initial-focus
+          activate={closeModal}
+        >
           Отмена
-        </button>
-        <button
+        </ActionButton>
+        <ActionButton
           class="primary"
-          onclick={() => {
+          activate={() => {
             closeModal();
             controller.start();
           }}
         >
           Начать
-        </button>
+        </ActionButton>
       </div>
     {:else}
       <p>Текущее слово останется без ответа.</p>
       <div class="dialog-actions">
-        <button class="secondary" data-initial-focus onclick={closeModal}>
+        <ActionButton
+          class="secondary"
+          data-initial-focus
+          activate={closeModal}
+        >
           Продолжить
-        </button>
-        <button
+        </ActionButton>
+        <ActionButton
           class="primary"
-          onclick={() => {
+          activate={() => {
             controller.dispatch({ type: 'end' });
             closeModal();
           }}
         >
           Закончить
-        </button>
+        </ActionButton>
       </div>
     {/if}
   </Dialog>
@@ -247,9 +266,9 @@
   >
     <div class="guessers picker">
       {#each guessers(controller.game) as player (player.id)}
-        <button
+        <ActionButton
           class="guesser"
-          onclick={() => {
+          activate={() => {
             controller.dispatch({ type: 'guess', player: player.id });
             controller.closePicker();
           }}
@@ -259,7 +278,7 @@
           </span>
           <span>{player.name}</span>
           <strong>+1</strong>
-        </button>
+        </ActionButton>
       {/each}
     </div>
   </Dialog>

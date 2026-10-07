@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ActionButton from './ActionButton.svelte';
   import { explainer, ranked, reachedGoal, type GameState } from '../lib/game';
   import { formatScore, describeEntry } from '../lib/presentation';
   import type { Controller } from '../lib/controller.svelte';
@@ -63,9 +64,9 @@
   {#if game.exhausted}
     <p class="functional-note">Слова в выбранных словарях закончились.</p>
   {/if}
-  <button
+  <ActionButton
     class="primary"
-    onclick={() =>
+    activate={() =>
       finished ? controller.menu() : controller.dispatch({ type: 'next' })}
   >
     {finished
@@ -73,5 +74,5 @@
       : reachedGoal(game) || game.exhausted
         ? 'Итоги игры'
         : 'Следующий игрок'}<Icon name="arrow" />
-  </button>
+  </ActionButton>
 </section>

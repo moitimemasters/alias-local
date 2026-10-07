@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ActionButton from './ActionButton.svelte';
   import { packs } from '../lib/dictionaries';
   import {
     TURN_SECONDS,
@@ -25,7 +26,7 @@
     </span>
   </div>
   {#if controller.game && controller.game.phase !== 'finished'}
-    <button class="resume-card" onclick={controller.resume}>
+    <ActionButton class="resume-card" activate={controller.resume}>
       <span class="resume-icon"><Icon name="play" size={24} /></span>
       <span>
         <strong>Продолжить игру</strong>
@@ -36,7 +37,7 @@
         </small>
       </span>
       <Icon name="arrow" />
-    </button>
+    </ActionButton>
   {/if}
   <div class="setup-grid">
     <section class="panel players-panel">
@@ -55,24 +56,24 @@
               bind:value={controller.config.names[index]}
               onchange={controller.savePreferences}
             />
-            <button
+            <ActionButton
               class="icon-button"
               aria-label={`Удалить игрока ${index + 1}`}
               disabled={controller.config.names.length <= MIN_PLAYERS}
-              onclick={() => controller.removePlayer(index)}
+              activate={() => controller.removePlayer(index)}
             >
               <Icon name="trash" size={18} />
-            </button>
+            </ActionButton>
           </div>
         {/each}
       </div>
-      <button
+      <ActionButton
         class="add-player"
         disabled={controller.config.names.length >= MAX_PLAYERS}
-        onclick={controller.addPlayer}
+        activate={controller.addPlayer}
       >
         <Icon name="plus" />Добавить игрока
-      </button>
+      </ActionButton>
       <div class="scoring-note">
         <div>
           <strong>+1</strong>
@@ -121,16 +122,16 @@
         <h3>Время на ход</h3>
         <div class="segments">
           {#each TURN_SECONDS as seconds (seconds)}
-            <button
+            <ActionButton
               aria-pressed={controller.config.seconds === seconds}
-              onclick={() => {
+              activate={() => {
                 controller.config.seconds = seconds;
                 controller.savePreferences();
               }}
             >
               {seconds}
               <span>с</span>
-            </button>
+            </ActionButton>
           {/each}
         </div>
       </div>
@@ -138,30 +139,30 @@
         <h3>Играем до</h3>
         <div class="segments">
           {#each TARGET_SCORES as target (target)}
-            <button
+            <ActionButton
               aria-pressed={controller.config.target === target}
-              onclick={() => {
+              activate={() => {
                 controller.config.target = target;
                 controller.savePreferences();
               }}
             >
               {target}
               <span>очков</span>
-            </button>
+            </ActionButton>
           {/each}
         </div>
       </div>
     </section>
   </div>
   <div class="setup-action">
-    <button
+    <ActionButton
       class="primary"
       disabled={controller.loading || !controller.dictionaries}
-      onclick={requestStart}
+      activate={requestStart}
     >
       {controller.loading ? 'Загружаем слова…' : 'Начать игру'}<Icon
         name="arrow"
       />
-    </button>
+    </ActionButton>
   </div>
 </div>

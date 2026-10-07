@@ -2,9 +2,11 @@
   import { explainer, guessers, isActive, type GameState } from '../lib/game';
   import { formatTime } from '../lib/presentation';
   import { WordGesture } from '../lib/word-gesture';
+  import { TouchTap, touchClicks } from '../lib/touch-activation';
   import type { Controller } from '../lib/controller.svelte';
   import Scoreboard from './Scoreboard.svelte';
   import Icon from './Icon.svelte';
+  import ActionButton from './ActionButton.svelte';
   let {
     controller,
     game,
@@ -22,11 +24,13 @@
   );
   let seconds = $derived(Math.ceil(game.remainingMs / 1000));
   const gesture = new WordGesture();
+  const cardTap = new TouchTap();
 
   function beginSwipe(event: PointerEvent) {
     if (!isActive(game) || !gesture.begin(event)) {
       return;
     }
+    cardTap.begin(event);
     (event.currentTarget as HTMLButtonElement).setPointerCapture(
       event.pointerId,
     );
@@ -34,11 +38,18 @@
 
   function finishSwipe(event: PointerEvent) {
     if (!isActive(game)) {
-      gesture.cancel(event.pointerId);
+      cancelSwipe(event);
       return;
     }
+    const accepted = cardTap.end(
+      event,
+      (event.currentTarget as HTMLButtonElement).getBoundingClientRect(),
+    );
+    if (accepted !== null) {
+      touchClicks.arm(event.pointerId);
+    }
     const direction = gesture.end(event);
-    if (direction === 'up') {
+    if (direction === 'up' || (direction === null && accepted)) {
       controller.openPicker();
     }
     if (direction === 'down') {
@@ -48,6 +59,9 @@
 
   function cancelSwipe(event: PointerEvent) {
     gesture.cancel(event.pointerId);
+    if (cardTap.cancel(event.pointerId)) {
+      touchClicks.arm(event.pointerId);
+    }
   }
 
   function chooseGuesser(event: MouseEvent) {
@@ -77,15 +91,15 @@
       >
         {formatTime(game.remainingMs)}
       </span>
-      <button
+      <ActionButton
         class="icon-button pause-button"
         aria-label={paused ? 'Продолжить' : 'Пауза'}
         aria-pressed={paused}
-        onclick={() =>
+        activate={() =>
           controller.dispatch({ type: paused ? 'resume' : 'pause' })}
       >
         <Icon name={paused ? 'play' : 'pause'} size={22} />
-      </button>
+      </ActionButton>
     </div>
   </div>
   <div
@@ -111,6 +125,7 @@
         ? 'Игра на паузе'
         : `Слово: ${game.word}. Выбрать угадавшего`}
       onpointerdown={beginSwipe}
+      onpointermove={(event) => cardTap.move(event)}
       onpointerup={finishSwipe}
       onpointercancel={cancelSwipe}
       onlostpointercapture={cancelSwipe}
@@ -134,19 +149,19 @@
       class:compact-picker={eligiblePlayers.length > 4}
     >
       <h2>Кто угадал?</h2>
-      <button
+      <ActionButton
         class="primary mobile-picker"
         disabled={paused}
-        onclick={controller.openPicker}
+        activate={controller.openPicker}
       >
         Угадали<Icon name="up" />
-      </button>
+      </ActionButton>
       <div class="guessers">
         {#each eligiblePlayers as player (player.id)}
-          <button
+          <ActionButton
             class="guesser"
             disabled={paused}
-            onclick={() =>
+            activate={() =>
               controller.dispatch({ type: 'guess', player: player.id })}
           >
             <span class="avatar color-{player.id % 4}">
@@ -154,7 +169,7 @@
             </span>
             <span>{player.name}</span>
             <strong>+1</strong>
-          </button>
+          </ActionButton>
         {/each}
       </div>
       {#if lastWord}
@@ -163,22 +178,24 @@
     </div>
   </div>
   <div class="play-actions">
-    <button
+    <ActionButton
       class="secondary"
       disabled={paused}
-      onclick={() => controller.dispatch({ type: 'skip' })}
+      activate={() => controller.dispatch({ type: 'skip' })}
     >
       <Icon name="down" />Пропустить
       <span>−1</span>
-    </button>
-    <button
+    </ActionButton>
+    <ActionButton
       class="secondary"
       disabled={paused || !game.entries.length}
-      onclick={() => controller.dispatch({ type: 'undo' })}
+      activate={() => controller.dispatch({ type: 'undo' })}
     >
       <Icon name="undo" />Отменить
-    </button>
-    <button class="text-button" onclick={requestEnd}>Закончить ход</button>
+    </ActionButton>
+    <ActionButton class="text-button" activate={requestEnd}>
+      Закончить ход
+    </ActionButton>
   </div>
   <div class="feedback" role="status">{controller.message}</div>
 </div>

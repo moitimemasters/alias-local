@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, type Snippet } from 'svelte';
   import Icon from './Icon.svelte';
+  import ActionButton from './ActionButton.svelte';
   let {
     title,
     close,
@@ -78,13 +79,13 @@
 >
   <div class="dialog-heading">
     <h2 bind:this={heading} id={headingId} tabindex="-1">{title}</h2>
-    <button
+    <ActionButton
       class="icon-button"
       aria-label="Закрыть"
-      onclick={() => dialog.close()}
+      activate={() => dialog.close()}
     >
       <Icon name="close" />
-    </button>
+    </ActionButton>
   </div>
   <div class="dialog-content">
     {@render children()}
