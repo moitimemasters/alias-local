@@ -11,7 +11,12 @@
   import Icon from './components/Icon.svelte';
   import Dialog from './components/Dialog.svelte';
   const c = createController();
-  const { needRefresh, updateServiceWorker } = useRegisterSW();
+  const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW({
+    onRegisterError: () =>
+      c.reportError(
+        'Не удалось подготовить офлайн-режим. Проверьте интернет и перезагрузите страницу.',
+      ),
+  });
   let modal = $state<'rules' | 'replace' | 'end' | null>(null);
   let installPrompt = $state<BeforeInstallPromptEvent | null>(null);
   let standalone = $state(false);
@@ -106,6 +111,7 @@
         {/if}
         <button
           class="icon-button"
+          disabled={!c.dictionaries && !c.loading}
           aria-label="Закрыть ошибку"
           onclick={c.clearError}
         >
@@ -173,6 +179,7 @@
         ? 'Начать новую игру?'
         : 'Закончить ход?'}
     close={closeModal}
+    initialFocus={modal === 'rules' ? 'heading' : 'action'}
   >
     {#if modal === 'rules'}
       <ol class="rules-list">
@@ -206,6 +213,7 @@
       </ol>
       <div class="rules-offline">
         <strong>Игра сохраняется на этом устройстве.</strong>
+        {#if $offlineReady}<p>Офлайн-режим готов.</p>{/if}
         <p>
           Для работы офлайн сначала откройте приложение с интернетом. На iPhone:
           «Поделиться» → «На экран “Домой”». На Android: меню браузера →
@@ -224,7 +232,9 @@
     {:else if modal === 'replace'}
       <p>Текущая сохранённая партия будет заменена.</p>
       <div class="dialog-actions">
-        <button class="secondary" onclick={closeModal}>Отмена</button>
+        <button class="secondary" data-initial-focus onclick={closeModal}>
+          Отмена
+        </button>
         <button
           class="primary"
           onclick={() => {
@@ -238,7 +248,9 @@
     {:else}
       <p>Текущее слово останется без ответа.</p>
       <div class="dialog-actions">
-        <button class="secondary" onclick={closeModal}>Продолжить</button>
+        <button class="secondary" data-initial-focus onclick={closeModal}>
+          Продолжить
+        </button>
         <button
           class="primary"
           onclick={() => {
@@ -253,7 +265,7 @@
   </Dialog>
 {/if}
 {#if c.picker && c.game}
-  <Dialog title="Кто угадал?" close={c.closePicker}>
+  <Dialog title="Кто угадал?" close={c.closePicker} initialFocus="action">
     <div class="guessers picker">
       {#each c.game.players.filter((p) => p.id !== explainerId(c.game!)) as player}
         <button

@@ -223,6 +223,9 @@ export function createController(options: ControllerOptions = {}) {
       clock.flush();
       return save();
     },
+    reportError: (message: string) => {
+      error = message;
+    },
     clearError: () => {
       error = '';
     },

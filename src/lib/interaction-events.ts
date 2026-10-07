@@ -53,6 +53,7 @@ export function attachInteractionEvents(
     [documentTarget, 'pointerdown', pointerDown, true],
     [documentTarget, 'pointerup', pointerUp, true],
     [documentTarget, 'pointercancel', pointerUp, true],
+    [documentTarget, 'lostpointercapture', pointerUp, true],
     [documentTarget, 'keydown', keyDown, true],
     [documentTarget, 'keyup', keyUp, true],
     [documentTarget, 'visibilitychange', visibility, false],

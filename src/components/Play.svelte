@@ -1,5 +1,6 @@
 <script lang="ts">
   import { explainerId, isActive, type GameState } from '../lib/game';
+  import { WordGesture } from '../lib/word-gesture';
   import type { Controller } from '../lib/controller.svelte';
   import Scoreboard from './Scoreboard.svelte';
   import Icon from './Icon.svelte';
@@ -17,29 +18,31 @@
     game.phase === 'lastword' || (paused && game.resumePhase === 'lastword'),
   );
   let seconds = $derived(Math.ceil(game.remainingMs / 1000));
-  let origin: { x: number; y: number; id: number } | null = null;
-  let swiped = false;
-  function beginSwipe(e: PointerEvent) {
-    if (!isActive(game) || !e.isPrimary) return;
-    origin = { x: e.clientX, y: e.clientY, id: e.pointerId };
-    swiped = false;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  const gesture = new WordGesture();
+
+  function beginSwipe(event: PointerEvent) {
+    if (!isActive(game) || !gesture.begin(event)) return;
+    (event.currentTarget as HTMLButtonElement).setPointerCapture(
+      event.pointerId,
+    );
   }
-  function finishSwipe(e: PointerEvent) {
-    if (!origin || e.pointerId !== origin.id) return;
-    const dx = e.clientX - origin.x,
-      dy = e.clientY - origin.y;
-    origin = null;
-    if (
-      Math.abs(dy) < 55 ||
-      Math.abs(dx) > Math.abs(dy) * 0.65 ||
-      !isActive(game)
-    )
+
+  function finishSwipe(event: PointerEvent) {
+    if (!isActive(game)) {
+      gesture.cancel(event.pointerId);
       return;
-    swiped = true;
-    e.preventDefault();
-    if (dy < 0) c.openPicker();
-    else c.dispatch({ type: 'skip' });
+    }
+    const direction = gesture.end(event);
+    if (direction === 'up') c.openPicker();
+    if (direction === 'down') c.dispatch({ type: 'skip' });
+  }
+
+  function cancelSwipe(event: PointerEvent) {
+    gesture.cancel(event.pointerId);
+  }
+
+  function chooseGuesser(event: MouseEvent) {
+    if (!gesture.consumeClick(event)) c.openPicker();
   }
 </script>
 
@@ -99,16 +102,9 @@
         : `Слово: ${game.word}. Выбрать угадавшего`}
       onpointerdown={beginSwipe}
       onpointerup={finishSwipe}
-      onpointercancel={() => {
-        origin = null;
-      }}
-      onclick={() => {
-        if (swiped) {
-          swiped = false;
-          return;
-        }
-        c.openPicker();
-      }}
+      onpointercancel={cancelSwipe}
+      onlostpointercapture={cancelSwipe}
+      onclick={chooseGuesser}
     >
       <span class="word-label">
         {paused ? 'Пауза' : lastWord ? 'Последнее слово' : 'Слово'}

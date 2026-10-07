@@ -5,15 +5,29 @@
     title,
     close,
     children,
-  }: { title: string; close: () => void; children: Snippet } = $props();
+    initialFocus = 'heading',
+  }: {
+    title: string;
+    close: () => void;
+    children: Snippet;
+    initialFocus?: 'heading' | 'action';
+  } = $props();
+  const headingId = $props.id();
   let dialog: HTMLDialogElement;
+  let heading: HTMLHeadingElement;
   onMount(() => {
     dialog.showModal();
+    const action = dialog.querySelector<HTMLElement>(
+      '[data-initial-focus], .dialog-content button',
+    );
+    if (initialFocus === 'action' && action) action.focus();
+    else heading.focus();
   });
 </script>
 
 <dialog
   bind:this={dialog}
+  aria-labelledby={headingId}
   onclose={close}
   onclick={(e) => {
     if (e.target === dialog) {
@@ -29,7 +43,7 @@
   }}
 >
   <div class="dialog-heading">
-    <h2>{title}</h2>
+    <h2 bind:this={heading} id={headingId} tabindex="-1">{title}</h2>
     <button
       class="icon-button"
       aria-label="Закрыть"
@@ -38,5 +52,7 @@
       <Icon name="close" />
     </button>
   </div>
-  {@render children()}
+  <div class="dialog-content">
+    {@render children()}
+  </div>
 </dialog>

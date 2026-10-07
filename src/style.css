@@ -636,7 +636,7 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 32px;
-  touch-action: none;
+  touch-action: pan-x pinch-zoom;
   -webkit-user-select: none;
   user-select: none;
   overflow: hidden;
@@ -942,7 +942,7 @@ dialog::backdrop {
 .picker {
   margin-top: 10px;
 }
-dialog > p {
+.dialog-content > p {
   font-size: 0.95rem;
   color: var(--muted);
   line-height: 1.6;
