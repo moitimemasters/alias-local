@@ -13,7 +13,10 @@ export function describeEntry(game: GameState, entry: Entry): string {
   if (entry.guesser === null) {
     return `${explaining} −1`;
   }
-  const answer = `${getPlayer(game, entry.guesser).name} +1`;
+  const answer =
+    entry.sharedWith === undefined
+      ? `${getPlayer(game, entry.guesser).name} +1`
+      : `${getPlayer(game, entry.guesser).name} +0,5 · ${getPlayer(game, entry.sharedWith).name} +0,5`;
   return entry.bonusUnits
     ? `${answer} · ${explaining} +${formatScore(entry.bonusUnits)}`
     : answer;

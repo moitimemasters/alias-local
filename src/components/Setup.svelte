@@ -122,17 +122,6 @@
           </label>
         {/each}
       </div>
-      <label class="hint-option">
-        <input
-          type="checkbox"
-          bind:checked={controller.config.hints}
-          onchange={controller.savePreferences}
-        />
-        <span>
-          <strong>Подсказки</strong>
-          <small>Определение слова без +0,5 объясняющему</small>
-        </span>
-      </label>
       <div class="option-row">
         <h3>Время на ход</h3>
         <div class="segments">

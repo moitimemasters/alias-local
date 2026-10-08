@@ -2,13 +2,13 @@ import {
   createGame,
   reduceGame,
   explainer,
-  getPlayer,
   guessers,
   type Action,
   type Config,
   type GameState,
 } from './game';
 import { TurnClock } from './clock';
+import { describeEntry } from './presentation';
 import { attachInteractionEvents } from './interaction-events';
 import {
   loadLocal,
@@ -105,9 +105,9 @@ export function createController(options: ControllerOptions = {}) {
       game = reduceGame(game, action);
       clock.reset();
       error = '';
-      if (action.type === 'guess') {
+      if (action.type === 'guess' || action.type === 'tie') {
         const entry = game.entries.at(-1);
-        message = `${getPlayer(game, action.player).name} +1${entry?.bonusUnits ? ` · ${explainer(game).name} +0,5` : ''}`;
+        message = entry ? describeEntry(game, entry) : '';
       } else if (action.type === 'skip') {
         message = `${explainer(game).name} −1`;
       } else if (action.type === 'undo') {
@@ -133,11 +133,7 @@ export function createController(options: ControllerOptions = {}) {
   }
 
   function openHint() {
-    if (
-      !game?.config.hints ||
-      !game.word ||
-      !['playing', 'lastword'].includes(game.phase)
-    ) {
+    if (!game?.word || !['playing', 'lastword'].includes(game.phase)) {
       return;
     }
     const definition = definitions?.[normalizeWord(game.word)];

@@ -9,7 +9,6 @@ export const MAX_NAME_LENGTH = 24;
 
 export type PackId = (typeof PACK_IDS)[number];
 export interface Config {
-  hints?: boolean;
   names: string[];
   packs: PackId[];
   seconds: (typeof TURN_SECONDS)[number];
@@ -18,7 +17,6 @@ export interface Config {
 
 export function defaultConfig(): Config {
   return {
-    hints: false,
     names: ['Игрок 1', 'Игрок 2', 'Игрок 3'],
     packs: ['fresh'],
     seconds: 60,
@@ -72,9 +70,9 @@ export function validateGameConfig(value: unknown): Config {
   }
 
   return {
-    ...value,
-    hints: value.hints ?? false,
     names,
     packs: [...value.packs],
+    seconds: value.seconds,
+    target: value.target,
   };
 }

@@ -947,6 +947,23 @@ dialog::backdrop {
 .picker {
   margin-top: 10px;
 }
+.tie-toggle {
+  width: 100%;
+  margin-top: 12px;
+}
+.tie-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.tie-actions > button {
+  flex: 1;
+  min-width: 0;
+}
+.guesser.selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
 .dialog-content > p {
   font-size: 0.95rem;
   color: var(--muted);
@@ -1454,26 +1471,6 @@ dialog::backdrop {
 }
 
 /* Local hints and round history */
-.hint-option {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 0 4px;
-  cursor: pointer;
-}
-.hint-option input {
-  width: 22px;
-  height: 22px;
-  accent-color: var(--accent);
-}
-.hint-option span {
-  display: grid;
-  gap: 4px;
-}
-.hint-option small {
-  color: var(--muted);
-  font-size: 0.8rem;
-}
 .turn-tools {
   display: flex;
   align-items: flex-start;

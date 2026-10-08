@@ -12,6 +12,7 @@ export interface Player {
 export interface Entry {
   word: string;
   guesser: number | null;
+  sharedWith?: number;
   explainer: number;
   bonusUnits: number;
   hinted?: boolean;
@@ -48,8 +49,13 @@ export type Action =
         | 'hint';
     }
   | { type: 'guess'; player: number }
+  | { type: 'tie'; players: [number, number] }
   | { type: 'elapse'; ms: number }
-  | { type: 'assign'; index: number; player: number | null };
+  | ({ type: 'assign'; index: number } & GuesserSelection);
+export interface GuesserSelection {
+  player: number | null;
+  sharedWith?: number;
+}
 export const explainerId = (game: GameState) => game.turn % game.players.length;
 export function isActive(
   game: GameState,
@@ -153,8 +159,8 @@ function changedScores(
       if (player.id === entry.explainer) {
         delta = -2;
       }
-    } else if (player.id === entry.guesser) {
-      delta = 2;
+    } else if (player.id === entry.guesser || player.id === entry.sharedWith) {
+      delta = entry.sharedWith === undefined ? 2 : 1;
     } else if (player.id === entry.explainer) {
       delta = entry.bonusUnits;
     }
@@ -162,6 +168,23 @@ function changedScores(
       ? player
       : { ...player, scoreUnits: player.scoreUnits + direction * delta };
   });
+}
+
+function validSelection(
+  game: GameState,
+  selection: GuesserSelection,
+  explainer: number,
+) {
+  const eligible = (id: number) =>
+    Number.isInteger(id) && !!game.players[id] && id !== explainer;
+  return (
+    (selection.player === null
+      ? selection.sharedWith === undefined
+      : eligible(selection.player)) &&
+    (selection.sharedWith === undefined ||
+      (eligible(selection.sharedWith) &&
+        selection.sharedWith !== selection.player))
+  );
 }
 
 export function reduceGame(game: GameState, action: Action): GameState {
@@ -205,20 +228,25 @@ export function reduceGame(game: GameState, action: Action): GameState {
       return { ...game, phase: game.resumePhase };
     case 'hint':
       requirePhase(game, 'playing', 'lastword');
-      if (!game.config.hints || !game.word) {
+      if (!game.word) {
         throw new Error('Подсказки недоступны.');
       }
       return game.hintUsed ? game : { ...game, hintUsed: true };
     case 'guess':
+    case 'tie':
     case 'skip': {
       requirePhase(game, 'playing', 'lastword');
-      const guesser = action.type === 'guess' ? action.player : null;
+      const guesser =
+        action.type === 'guess'
+          ? action.player
+          : action.type === 'tie'
+            ? action.players[0]
+            : null;
+      const sharedWith = action.type === 'tie' ? action.players[1] : undefined;
       const explainer = explainerId(game);
       if (
-        guesser !== null &&
-        (!Number.isInteger(guesser) ||
-          !game.players[guesser] ||
-          guesser === explainer)
+        !validSelection(game, { player: guesser, sharedWith }, explainer) ||
+        (action.type === 'tie' && sharedWith === undefined)
       ) {
         throw new Error('Выберите угадавшего игрока.');
       }
@@ -228,6 +256,7 @@ export function reduceGame(game: GameState, action: Action): GameState {
       const entry: Entry = {
         word: game.word,
         guesser,
+        sharedWith,
         explainer,
         bonusUnits: guesser === null || game.hintUsed ? 0 : 1,
         hinted: game.hintUsed,
@@ -262,19 +291,23 @@ export function reduceGame(game: GameState, action: Action): GameState {
       if (
         !Number.isInteger(action.index) ||
         !entry ||
-        (action.player !== null &&
-          (!Number.isInteger(action.player) ||
-            !game.players[action.player] ||
-            action.player === entry.explainer))
+        !validSelection(game, action, entry.explainer)
       ) {
         throw new Error('Выберите угадавшего игрока.');
       }
-      if (entry.guesser === action.player) {
+      if (
+        (entry.guesser === action.player &&
+          entry.sharedWith === action.sharedWith) ||
+        (entry.sharedWith !== undefined &&
+          entry.guesser === action.sharedWith &&
+          entry.sharedWith === action.player)
+      ) {
         return game;
       }
       const corrected: Entry = {
         ...entry,
         guesser: action.player,
+        sharedWith: action.sharedWith,
         bonusUnits:
           action.player === null || entry.hinted
             ? 0

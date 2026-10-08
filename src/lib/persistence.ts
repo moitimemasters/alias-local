@@ -33,7 +33,8 @@ function isEntries(value: unknown, playerCount: number): value is Entry[] {
       if (!isRecord(entry)) {
         return false;
       }
-      const { word, explainer, guesser, bonusUnits, hinted } = entry;
+      const { word, explainer, guesser, sharedWith, bonusUnits, hinted } =
+        entry;
       return (
         (hinted === undefined || typeof hinted === 'boolean') &&
         (!hinted || bonusUnits === 0) &&
@@ -48,6 +49,14 @@ function isEntries(value: unknown, playerCount: number): value is Entry[] {
             guesser >= 0 &&
             guesser < playerCount &&
             guesser !== explainer)) &&
+        (sharedWith === undefined ||
+          (guesser !== null &&
+            typeof sharedWith === 'number' &&
+            Number.isInteger(sharedWith) &&
+            sharedWith >= 0 &&
+            sharedWith < playerCount &&
+            sharedWith !== guesser &&
+            sharedWith !== explainer)) &&
         (bonusUnits === 0 || bonusUnits === 1) &&
         (guesser !== null || bonusUnits === 0)
       );
@@ -100,7 +109,7 @@ function validate(value: unknown): GameState {
     remainingMs > config.seconds * 1000 ||
     typeof exhausted !== 'boolean' ||
     typeof hintUsed !== 'boolean' ||
-    (hintUsed && (!config.hints || phase !== 'paused')) ||
+    (hintUsed && phase !== 'paused') ||
     (resumePhase !== 'playing' && resumePhase !== 'lastword') ||
     (phase !== 'ready' &&
       phase !== 'paused' &&

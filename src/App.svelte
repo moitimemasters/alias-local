@@ -3,7 +3,7 @@
   import { useRegisterSW } from 'virtual:pwa-register/svelte';
   import { createController } from './lib/controller.svelte';
   import { registerGameTools } from './lib/webmcp';
-  import { guessers } from './lib/game';
+  import { guessers, type GuesserSelection } from './lib/game';
   import Setup from './components/Setup.svelte';
   import Play from './components/Play.svelte';
   import Results from './components/Results.svelte';
@@ -13,6 +13,7 @@
   import Scoreboard from './components/Scoreboard.svelte';
   import ActionButton from './components/ActionButton.svelte';
   import Dialog from './components/Dialog.svelte';
+  import GuesserPicker from './components/GuesserPicker.svelte';
   const controller = createController();
   const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW({
     onRegisterError: () =>
@@ -39,6 +40,17 @@
   function closeModal() {
     modal = null;
     controller.release('modal');
+  }
+  function chooseGuesser({ player, sharedWith }: GuesserSelection) {
+    if (player === null) {
+      return;
+    }
+    controller.dispatch(
+      sharedWith === undefined
+        ? { type: 'guess', player }
+        : { type: 'tie', players: [player, sharedWith] },
+    );
+    controller.closePicker();
   }
   function requestStart() {
     if (controller.game && controller.game.phase !== 'finished') {
@@ -264,23 +276,7 @@
     close={controller.closePicker}
     initialFocus="action"
   >
-    <div class="guessers picker">
-      {#each guessers(controller.game) as player (player.id)}
-        <ActionButton
-          class="guesser"
-          activate={() => {
-            controller.dispatch({ type: 'guess', player: player.id });
-            controller.closePicker();
-          }}
-        >
-          <span class="avatar color-{player.id % 4}">
-            {player.name.slice(0, 1).toUpperCase()}
-          </span>
-          <span>{player.name}</span>
-          <strong>+1</strong>
-        </ActionButton>
-      {/each}
-    </div>
+    <GuesserPicker players={guessers(controller.game)} choose={chooseGuesser} />
   </Dialog>
 {/if}
 

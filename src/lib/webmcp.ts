@@ -77,7 +77,6 @@ export function registerGameTools(initialController: Controller): () => void {
       inputSchema: {
         type: 'object',
         properties: {
-          hints: { type: 'boolean' },
           names: {
             type: 'array',
             items: { type: 'string', minLength: 1, maxLength: MAX_NAME_LENGTH },
@@ -101,7 +100,6 @@ export function registerGameTools(initialController: Controller): () => void {
       execute: (input) => {
         const controller = activeController();
         const config = validateGameConfig({
-          hints: input.hints ?? controller.config.hints ?? false,
           names: input.names,
           packs: input.packs ?? controller.config.packs,
           seconds: input.seconds ?? controller.config.seconds,
@@ -129,7 +127,7 @@ export function registerGameTools(initialController: Controller): () => void {
     {
       name: 'play_alias',
       description:
-        'Play the local game: begin a turn, pause/resume, guess (+1 guesser, +0.5 explainer), skip (−1 explainer), undo, end or next. These tools operate only this device.',
+        'Play the local game: begin, pause/resume, guess (+1 guesser), tie (players: exactly two, +0.5 each), skip (−1 explainer), undo, end or next. The explainer receives +0.5 per guessed word, or 0 after a hint. These tools operate only this device.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -140,6 +138,7 @@ export function registerGameTools(initialController: Controller): () => void {
               'pause',
               'resume',
               'guess',
+              'tie',
               'skip',
               'undo',
               'end',
@@ -147,6 +146,13 @@ export function registerGameTools(initialController: Controller): () => void {
             ],
           },
           player: { type: 'integer' },
+          players: {
+            type: 'array',
+            items: { type: 'integer' },
+            minItems: 2,
+            maxItems: 2,
+            uniqueItems: true,
+          },
         },
         required: ['action'],
         additionalProperties: false,
@@ -159,6 +165,7 @@ export function registerGameTools(initialController: Controller): () => void {
           'pause',
           'resume',
           'guess',
+          'tie',
           'skip',
           'undo',
           'end',
@@ -178,6 +185,20 @@ export function registerGameTools(initialController: Controller): () => void {
           controller.dispatch({
             type: 'guess',
             player: input.player,
+          });
+        } else if (action === 'tie') {
+          const players = input.players;
+          if (
+            !Array.isArray(players) ||
+            players.length !== 2 ||
+            typeof players[0] !== 'number' ||
+            typeof players[1] !== 'number'
+          ) {
+            throw new Error('Нужны два players.');
+          }
+          controller.dispatch({
+            type: 'tie',
+            players: [players[0], players[1]],
           });
         } else if (action === 'resume' && controller.view === 'setup') {
           controller.resume();

@@ -4,6 +4,46 @@ import { registerGameTools } from '../lib/webmcp';
 
 afterEach(() => vi.unstubAllGlobals());
 
+it('accepts exactly two distinct eligible players for a tie through the browser tool', async () => {
+  const tools = new Map<
+    string,
+    { execute: (input: Record<string, unknown>) => unknown }
+  >();
+  vi.stubGlobal('document', {
+    modelContext: {
+      registerTool: (tool: {
+        name: string;
+        execute: (input: Record<string, unknown>) => unknown;
+      }) => tools.set(tool.name, tool),
+    },
+  });
+  const controller = createController({
+    storage: { getItem: () => null, setItem() {}, removeItem() {} },
+    loadHints: () => Promise.resolve({}),
+    loadWords: () =>
+      Promise.resolve({
+        fresh: ['кот', 'дом'],
+        easy: [],
+        hard: [],
+        normal: [],
+      }),
+  });
+  await controller.initialize();
+  controller.start();
+  controller.dispatch({ type: 'begin' });
+  const cleanup = registerGameTools(controller);
+  await Promise.resolve();
+  const play = tools.get('play_alias')!;
+  for (const players of [undefined, [1], [1, 2, 3], [1, '2'], [1, 1], [0, 2]]) {
+    expect(() => play.execute({ action: 'tie', players })).toThrow();
+    expect(controller.game?.entries).toHaveLength(0);
+  }
+  expect(play.execute({ action: 'tie', players: [1, 2] })).toMatchObject({
+    game: { players: [{ score: 0.5 }, { score: 0.5 }, { score: 0.5 }] },
+  });
+  cleanup();
+});
+
 it.each([false, true])(
   'cleans up optional browser tools when unregisterTool is present: %s',
   async (supportsCleanup) => {

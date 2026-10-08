@@ -1,17 +1,24 @@
 <script lang="ts">
   import { touchActivation } from '../lib/touch-attachment';
   import ActionButton from './ActionButton.svelte';
-  import { explainer, ranked, reachedGoal, type GameState } from '../lib/game';
+  import {
+    explainer,
+    ranked,
+    reachedGoal,
+    type GameState,
+    type GuesserSelection,
+  } from '../lib/game';
   import { formatScore } from '../lib/presentation';
   import type { Controller } from '../lib/controller.svelte';
   import Scoreboard from './Scoreboard.svelte';
   import Icon from './Icon.svelte';
   import WordHistory from './WordHistory.svelte';
   import Dialog from './Dialog.svelte';
+  import GuesserPicker from './GuesserPicker.svelte';
   let editing = $state<number | null>(null);
-  function assign(player: number | null) {
+  function assign(selection: GuesserSelection) {
     if (editing !== null) {
-      controller.dispatch({ type: 'assign', index: editing, player });
+      controller.dispatch({ type: 'assign', index: editing, ...selection });
       editing = null;
     }
   }
@@ -93,23 +100,13 @@
     close={() => (editing = null)}
     initialFocus="action"
   >
-    <div class="guessers picker">
-      {#each game.players.filter((player) => player.id !== selectedEntry.explainer) as player (player.id)}
-        <ActionButton
-          class="guesser"
-          aria-pressed={selectedEntry.guesser === player.id}
-          activate={() => assign(player.id)}
-        >
-          {player.name}
-        </ActionButton>
-      {/each}
-    </div>
-    <ActionButton
-      class="secondary correction-skip"
-      aria-pressed={selectedEntry.guesser === null}
-      activate={() => assign(null)}
-    >
-      Пропущено · −1 объясняющему
-    </ActionButton>
+    <GuesserPicker
+      players={game.players.filter(
+        (player) => player.id !== selectedEntry.explainer,
+      )}
+      selected={selectedEntry}
+      allowSkip
+      choose={assign}
+    />
   </Dialog>
 {/if}

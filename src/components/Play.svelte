@@ -190,22 +190,20 @@
     </div>
   </div>
   <div class="turn-tools">
-    {#if game.config.hints}
-      <ActionButton
-        class="secondary hint-button"
-        disabled={paused || !controller.hintAvailable}
-        title={controller.hintAvailable
-          ? undefined
-          : 'В локальном словаре нет определения'}
-        activate={controller.openHint}
-      >
-        {!controller.hintAvailable
-          ? 'Нет подсказки'
-          : game.hintUsed
-            ? 'Подсказка · +0'
-            : 'Подсказка'}
-      </ActionButton>
-    {/if}
+    <ActionButton
+      class="secondary hint-button"
+      disabled={paused || !controller.hintAvailable}
+      title={controller.hintAvailable
+        ? undefined
+        : 'В локальном словаре нет определения'}
+      activate={controller.openHint}
+    >
+      {!controller.hintAvailable
+        ? 'Нет подсказки'
+        : game.hintUsed
+          ? 'Подсказка · +0'
+          : 'Подсказка'}
+    </ActionButton>
     <details class="round-history" bind:open={historyOpen}>
       <summary {@attach touchActivation}>
         Слова хода · {game.entries.length}

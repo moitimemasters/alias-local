@@ -14,7 +14,6 @@ const make = () =>
   reduceGame(
     createGame(
       {
-        hints: true,
         names: ['Аня', 'Борис', 'Вера'],
         packs: ['fresh'],
         seconds: 30,
@@ -48,7 +47,7 @@ it('keeps the guesser point, removes only the current-word bonus and restores th
   expect(normal.players.map((p) => p.scoreUnits)).toEqual([-1, 0, 2]);
 });
 
-it('supports a hint on the untimed last word, rejects it while paused or in the ordinary mode', () => {
+it('supports a hint on the untimed last word and rejects it while paused', () => {
   const last = act(make(), { type: 'elapse', ms: 30000 });
   const summary = act(act(last, { type: 'hint' }), {
     type: 'guess',
@@ -57,12 +56,6 @@ it('supports a hint on the untimed last word, rejects it while paused or in the 
   expect(summary.phase).toBe('summary');
   expect(summary.players.map((p) => p.scoreUnits)).toEqual([0, 0, 2]);
   expect(() => act(act(make(), { type: 'pause' }), { type: 'hint' })).toThrow();
-  expect(() =>
-    act(
-      { ...make(), config: { ...make().config, hints: false } },
-      { type: 'hint' },
-    ),
-  ).toThrow();
 });
 
 it('moves points between guessers exactly once and reversibly corrects guesses to skips and back', () => {
@@ -134,6 +127,22 @@ it('migrates old snapshots without hints, but rejects corrupt new hint flags', (
   expect(() => decodeGame(JSON.stringify(record))).toThrow();
 });
 
+it('allows per-word hints in an old saved party with its global hint setting off', () => {
+  const record = JSON.parse(encodeGame(make())) as {
+    version: number;
+    game: GameState & { config: GameState['config'] & { hints?: boolean } };
+  };
+  record.game.config.hints = false;
+  const restored = act(decodeGame(JSON.stringify(record)), { type: 'resume' });
+  expect('hints' in restored.config).toBe(false);
+  const hinted = act(restored, { type: 'hint' });
+  expect(decodeGame(encodeGame(hinted)).hintUsed).toBe(true);
+  const guessed = act(hinted, { type: 'guess', player: 1 });
+  expect(guessed.players.map((p) => p.scoreUnits)).toEqual([0, 2, 0]);
+  const next = act(guessed, { type: 'guess', player: 2 });
+  expect(next.players.map((p) => p.scoreUnits)).toEqual([1, 2, 2]);
+});
+
 it('ships real Russian definitions matching game words, with accent and ё normalization', () => {
   const definitions: unknown = JSON.parse(
     readFileSync(
@@ -175,7 +184,7 @@ it('shows only local available hints, freezes reading time and checkpoints the u
       Promise.resolve({ кот: { word: 'кот', meanings: ['Самец кошки.'] } }),
   });
   await controller.initialize();
-  controller.start({ ...controller.config, hints: true });
+  controller.start();
   controller.dispatch({ type: 'begin' });
   now = 1000;
   controller.openHint();
@@ -215,7 +224,7 @@ it('does not charge for a missing definition or hold the clock', async () => {
     loadHints: () => Promise.resolve({}),
   });
   await controller.initialize();
-  controller.start({ ...controller.config, hints: true });
+  controller.start();
   controller.dispatch({ type: 'begin' });
   controller.openHint();
   expect(controller.hint).toBeNull();
