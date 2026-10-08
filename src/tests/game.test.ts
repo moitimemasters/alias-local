@@ -21,7 +21,7 @@ describe('personal scores and turn transitions', () => {
   it('gives +1 to the guesser and +0.5 to the explainer, without mutating the previous state', () => {
     const game = act(make(), { type: 'begin' });
     const next = act(game, { type: 'guess', player: 1 });
-    expect(next.players.map((p) => p.scoreUnits)).toEqual([1, 2, 0]);
+    expect(next.players.map((p) => p.scoreUnits)).toEqual([50, 100, 0]);
     expect(game.players.map((p) => p.scoreUnits)).toEqual([0, 0, 0]);
     expect(() => act(game, { type: 'guess', player: 0 })).toThrow();
     expect(next.word).not.toBe(game.word);
@@ -30,7 +30,7 @@ describe('personal scores and turn transitions', () => {
     const initial = act(make(), { type: 'begin' });
     const guessed = act(initial, { type: 'guess', player: 1 });
     const skipped = act(guessed, { type: 'skip' });
-    expect(skipped.players.map((p) => p.scoreUnits)).toEqual([-1, 2, 0]);
+    expect(skipped.players.map((p) => p.scoreUnits)).toEqual([-50, 100, 0]);
     const undoSkip = act(skipped, { type: 'undo' });
     expect(undoSkip.word).toBe(guessed.word);
     const undone = act(undoSkip, { type: 'undo' });
@@ -71,14 +71,14 @@ describe('personal scores and turn transitions', () => {
       game = act(game, { type: 'guess', player: 1 });
     }
     expect(game.phase).toBe('summary');
-    expect(game.players.map((p) => p.scoreUnits)).toEqual([60, 120, 0]);
+    expect(game.players.map((p) => p.scoreUnits)).toEqual([3000, 6000, 0]);
     expect(act(game, { type: 'next' }).phase).toBe('finished');
     let explaining = act(make(), { type: 'begin' });
     explaining = {
       ...explaining,
       players: explaining.players.map((p, i) => ({
         ...p,
-        scoreUnits: i === 0 ? 119 : 0,
+        scoreUnits: i === 0 ? 5950 : 0,
       })),
     };
     expect(act(explaining, { type: 'guess', player: 1 }).phase).toBe('summary');
@@ -152,7 +152,7 @@ describe('local persistence', () => {
     expect(restored.word).toBe(game.word);
     expect(restored.players).toEqual(game.players);
     const resumed = act(restored, { type: 'resume' });
-    expect(act(resumed, { type: 'undo' }).players[0]?.scoreUnits).toBe(1);
+    expect(act(resumed, { type: 'undo' }).players[0]?.scoreUnits).toBe(50);
   });
   it('preserves ready, summary and last-word stages', () => {
     expect(decodeGame(encodeGame(make())).phase).toBe('ready');
@@ -192,7 +192,7 @@ describe('local persistence', () => {
       },
     };
     let game = decodeGame(JSON.stringify(legacy));
-    expect(game.players[0]?.scoreUnits).toBe(-1);
+    expect(game.players[0]?.scoreUnits).toBe(-50);
     game = act(game, { type: 'resume' });
     game = act(game, { type: 'undo' });
     game = act(game, { type: 'undo' });
@@ -206,7 +206,7 @@ describe('local persistence', () => {
     expect(decodeGame(JSON.stringify(legacy)).entries[0]?.bonusUnits).toBe(0);
   });
   it('rejects corrupted saves and keeps an error recoverable', () => {
-    const record = { version: 2, game: make() };
+    const record = { version: 3, game: make() };
     getPlayer(record.game, 0).scoreUnits = 0.5;
     expect(() => decodeGame(JSON.stringify(record))).toThrow();
     expect(() => decodeGame('{broken')).toThrow();

@@ -9,7 +9,8 @@ import {
 import { isRecord, isWord } from './validation';
 
 export { defaultConfig, validConfig } from './config';
-export const SAVE_KEY = 'alias-local-game-v2';
+export const SAVE_KEY = 'alias-local-game-v3';
+export const PREVIOUS_SAVE_KEY = 'alias-local-game-v2';
 export const CONFIG_KEY = 'alias-local-config-v2';
 export const LEGACY_KEY = 'alias-personal-game-v1';
 const MAX_SAVED_WORDS = 100_000;
@@ -51,13 +52,20 @@ function isEntries(value: unknown, playerCount: number): value is Entry[] {
             guesser !== explainer)) &&
         (sharedWith === undefined ||
           (guesser !== null &&
-            typeof sharedWith === 'number' &&
-            Number.isInteger(sharedWith) &&
-            sharedWith >= 0 &&
-            sharedWith < playerCount &&
-            sharedWith !== guesser &&
-            sharedWith !== explainer)) &&
-        (bonusUnits === 0 || bonusUnits === 1) &&
+            Array.isArray(sharedWith) &&
+            sharedWith.length > 0 &&
+            sharedWith.length < playerCount &&
+            new Set(sharedWith).size === sharedWith.length &&
+            sharedWith.every(
+              (id: unknown) =>
+                typeof id === 'number' &&
+                Number.isInteger(id) &&
+                id >= 0 &&
+                id < playerCount &&
+                id !== guesser &&
+                id !== explainer,
+            ))) &&
+        (bonusUnits === 0 || bonusUnits === 50) &&
         (guesser !== null || bonusUnits === 0)
       );
     })
@@ -65,7 +73,7 @@ function isEntries(value: unknown, playerCount: number): value is Entry[] {
 }
 
 function validate(value: unknown): GameState {
-  if (!isRecord(value) || value.version !== 2) {
+  if (!isRecord(value) || value.version !== 3) {
     throw new Error('Сохранение повреждено.');
   }
 
@@ -134,7 +142,7 @@ function validate(value: unknown): GameState {
   }
 
   return {
-    version: 2,
+    version: 3,
     config,
     players,
     deck,
@@ -160,7 +168,7 @@ function migrateLegacy(record: Record<string, unknown>): GameState {
     if (!isRecord(player) || typeof player.score !== 'number') {
       throw new Error('Старое сохранение повреждено.');
     }
-    return { id: player.id, name: player.name, scoreUnits: player.score * 2 };
+    return { id: player.id, name: player.name, scoreUnits: player.score * 100 };
   });
   function migrateEntries(value: unknown) {
     if (!Array.isArray(value)) {
@@ -177,13 +185,13 @@ function migrateLegacy(record: Record<string, unknown>): GameState {
         word: entry.word,
         guesser: entry.player,
         explainer: entry.explainer,
-        bonusUnits: (entry.bonus ?? 0) * 2,
+        bonusUnits: (entry.bonus ?? 0) * 100,
       };
     });
   }
 
   return validate({
-    version: 2,
+    version: 3,
     config: {
       names: players.map((player) => player.name),
       packs: record.selected,
@@ -203,13 +211,62 @@ function migrateLegacy(record: Record<string, unknown>): GameState {
   });
 }
 
+function migrateHalfPoints(value: unknown): GameState {
+  if (
+    !isRecord(value) ||
+    value.version !== 2 ||
+    !Array.isArray(value.players)
+  ) {
+    throw new Error('Старое сохранение повреждено.');
+  }
+  const players = value.players.map((player) => {
+    if (
+      !isRecord(player) ||
+      typeof player.scoreUnits !== 'number' ||
+      !Number.isSafeInteger(player.scoreUnits)
+    ) {
+      throw new Error('Старое сохранение повреждено.');
+    }
+    return { ...player, scoreUnits: player.scoreUnits * 50 };
+  });
+  function migrateEntries(entries: unknown) {
+    if (!Array.isArray(entries)) {
+      throw new Error('Старое сохранение повреждено.');
+    }
+    return entries.map((entry) => {
+      if (
+        !isRecord(entry) ||
+        (entry.bonusUnits !== 0 && entry.bonusUnits !== 1)
+      ) {
+        throw new Error('Старое сохранение повреждено.');
+      }
+      return {
+        ...entry,
+        bonusUnits: entry.bonusUnits * 50,
+        sharedWith:
+          entry.sharedWith === undefined ? undefined : [entry.sharedWith],
+      };
+    });
+  }
+  return validate({
+    ...value,
+    version: 3,
+    players,
+    entries: migrateEntries(value.entries),
+    lastEntries: migrateEntries(value.lastEntries),
+  });
+}
+
 export function decodeGame(raw: string): GameState {
   const record: unknown = JSON.parse(raw);
   if (!isRecord(record)) {
     throw new Error('Неизвестный формат сохранения.');
   }
-  if (record.version === 2) {
+  if (record.version === 3) {
     return validate(record.game);
+  }
+  if (record.version === 2) {
+    return migrateHalfPoints(record.game);
   }
   if (record.version === 1) {
     return migrateLegacy(record);
@@ -219,7 +276,7 @@ export function decodeGame(raw: string): GameState {
 
 export function encodeGame(game: GameState): string {
   return JSON.stringify({
-    version: 2,
+    version: 3,
     game: reduceGame(game, { type: 'pause' }),
   });
 }
@@ -236,7 +293,10 @@ export function loadLocal(storage: LocalStorage) {
   const errors: string[] = [];
 
   try {
-    const raw = storage.getItem(SAVE_KEY) ?? storage.getItem(LEGACY_KEY);
+    const raw =
+      storage.getItem(SAVE_KEY) ??
+      storage.getItem(PREVIOUS_SAVE_KEY) ??
+      storage.getItem(LEGACY_KEY);
     if (raw) {
       game = decodeGame(raw);
       config = {

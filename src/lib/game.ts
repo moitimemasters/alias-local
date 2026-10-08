@@ -2,6 +2,11 @@ import { validateGameConfig, type Config } from './config';
 import { isWord } from './validation';
 
 export type { Config, PackId } from './config';
+export const POINT_UNITS = 100;
+export const guessAwardUnits = (count: number) =>
+  count > 0 ? Math.floor(POINT_UNITS / count) : 0;
+export const entryGuessers = (entry: Entry): number[] =>
+  entry.guesser === null ? [] : [entry.guesser, ...(entry.sharedWith ?? [])];
 
 export interface Player {
   id: number;
@@ -12,7 +17,7 @@ export interface Player {
 export interface Entry {
   word: string;
   guesser: number | null;
-  sharedWith?: number;
+  sharedWith?: number[];
   explainer: number;
   bonusUnits: number;
   hinted?: boolean;
@@ -21,7 +26,7 @@ export interface Entry {
 export type Phase =
   'ready' | 'playing' | 'lastword' | 'paused' | 'summary' | 'finished';
 export interface GameState {
-  version: 2;
+  version: 3;
   config: Config;
   players: Player[];
   deck: string[];
@@ -49,12 +54,12 @@ export type Action =
         | 'hint';
     }
   | { type: 'guess'; player: number }
-  | { type: 'tie'; players: [number, number] }
+  | { type: 'tie'; players: number[] }
   | { type: 'elapse'; ms: number }
   | ({ type: 'assign'; index: number } & GuesserSelection);
 export interface GuesserSelection {
   player: number | null;
-  sharedWith?: number;
+  sharedWith?: number[];
 }
 export const explainerId = (game: GameState) => game.turn % game.players.length;
 export function isActive(
@@ -64,7 +69,7 @@ export function isActive(
 }
 
 export const reachedGoal = (game: GameState) =>
-  game.players.some((p) => p.scoreUnits >= game.config.target * 2);
+  game.players.some((p) => p.scoreUnits >= game.config.target * POINT_UNITS);
 export function getPlayer(game: GameState, id: number): Player {
   const player = game.players[id];
   if (!player) {
@@ -110,7 +115,7 @@ export function createGame(
     deck[j] = current;
   }
   return {
-    version: 2,
+    version: 3,
     config: validated,
     players: names.map((name, id) => ({ id, name, scoreUnits: 0 })),
     deck,
@@ -153,14 +158,16 @@ function changedScores(
   entry: Entry,
   direction: 1 | -1,
 ): Player[] {
+  const recipients = entryGuessers(entry);
+  const award = guessAwardUnits(recipients.length);
   return game.players.map((player) => {
     let delta = 0;
     if (entry.guesser === null) {
       if (player.id === entry.explainer) {
-        delta = -2;
+        delta = -POINT_UNITS;
       }
-    } else if (player.id === entry.guesser || player.id === entry.sharedWith) {
-      delta = entry.sharedWith === undefined ? 2 : 1;
+    } else if (recipients.includes(player.id)) {
+      delta = award;
     } else if (player.id === entry.explainer) {
       delta = entry.bonusUnits;
     }
@@ -177,14 +184,14 @@ function validSelection(
 ) {
   const eligible = (id: number) =>
     Number.isInteger(id) && !!game.players[id] && id !== explainer;
-  return (
-    (selection.player === null
-      ? selection.sharedWith === undefined
-      : eligible(selection.player)) &&
-    (selection.sharedWith === undefined ||
-      (eligible(selection.sharedWith) &&
-        selection.sharedWith !== selection.player))
-  );
+  if (selection.player === null) {
+    return selection.sharedWith === undefined;
+  }
+  if (selection.sharedWith?.length === 0) {
+    return false;
+  }
+  const ids = [selection.player, ...(selection.sharedWith ?? [])];
+  return ids.every(eligible) && new Set(ids).size === ids.length;
 }
 
 export function reduceGame(game: GameState, action: Action): GameState {
@@ -240,13 +247,14 @@ export function reduceGame(game: GameState, action: Action): GameState {
         action.type === 'guess'
           ? action.player
           : action.type === 'tie'
-            ? action.players[0]
+            ? (action.players[0] ?? null)
             : null;
-      const sharedWith = action.type === 'tie' ? action.players[1] : undefined;
+      const sharedWith =
+        action.type === 'tie' ? action.players.slice(1) : undefined;
       const explainer = explainerId(game);
       if (
         !validSelection(game, { player: guesser, sharedWith }, explainer) ||
-        (action.type === 'tie' && sharedWith === undefined)
+        (action.type === 'tie' && action.players.length < 2)
       ) {
         throw new Error('Выберите угадавшего игрока.');
       }
@@ -258,7 +266,7 @@ export function reduceGame(game: GameState, action: Action): GameState {
         guesser,
         sharedWith,
         explainer,
-        bonusUnits: guesser === null || game.hintUsed ? 0 : 1,
+        bonusUnits: guesser === null || game.hintUsed ? 0 : 50,
         hinted: game.hintUsed,
       };
       const next = {
@@ -295,24 +303,26 @@ export function reduceGame(game: GameState, action: Action): GameState {
       ) {
         throw new Error('Выберите угадавшего игрока.');
       }
+      const previous = entryGuessers(entry);
+      const recipients =
+        action.player === null
+          ? []
+          : [action.player, ...(action.sharedWith ?? [])];
       if (
-        (entry.guesser === action.player &&
-          entry.sharedWith === action.sharedWith) ||
-        (entry.sharedWith !== undefined &&
-          entry.guesser === action.sharedWith &&
-          entry.sharedWith === action.player)
+        previous.length === recipients.length &&
+        previous.every((id) => recipients.includes(id))
       ) {
         return game;
       }
       const corrected: Entry = {
         ...entry,
         guesser: action.player,
-        sharedWith: action.sharedWith,
+        sharedWith: action.sharedWith ? [...action.sharedWith] : undefined,
         bonusUnits:
           action.player === null || entry.hinted
             ? 0
             : entry.guesser === null
-              ? 1
+              ? 50
               : entry.bonusUnits,
       };
       const reversed = { ...game, players: changedScores(game, entry, -1) };

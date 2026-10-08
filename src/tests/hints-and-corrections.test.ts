@@ -34,7 +34,7 @@ it('keeps the guesser point, removes only the current-word bonus and restores th
   const restored = act(decodeGame(encodeGame(hinted)), { type: 'resume' });
   expect(restored.hintUsed).toBe(true);
   const guessed = act(restored, { type: 'guess', player: 1 });
-  expect(guessed.players.map((p) => p.scoreUnits)).toEqual([0, 2, 0]);
+  expect(guessed.players.map((p) => p.scoreUnits)).toEqual([0, 100, 0]);
   expect(guessed.entries[0]).toMatchObject({ hinted: true, bonusUnits: 0 });
   expect(guessed.hintUsed).toBe(false);
   const undone = act(guessed, { type: 'undo' });
@@ -42,9 +42,9 @@ it('keeps the guesser point, removes only the current-word bonus and restores th
   expect(undone.hintUsed).toBe(true);
   expect(undone.players).toEqual(initial.players);
   const skipped = act(undone, { type: 'skip' });
-  expect(skipped.players[0]?.scoreUnits).toBe(-2);
+  expect(skipped.players[0]?.scoreUnits).toBe(-100);
   const normal = act(skipped, { type: 'guess', player: 2 });
-  expect(normal.players.map((p) => p.scoreUnits)).toEqual([-1, 0, 2]);
+  expect(normal.players.map((p) => p.scoreUnits)).toEqual([-50, 0, 100]);
 });
 
 it('supports a hint on the untimed last word and rejects it while paused', () => {
@@ -54,7 +54,7 @@ it('supports a hint on the untimed last word and rejects it while paused', () =>
     player: 2,
   });
   expect(summary.phase).toBe('summary');
-  expect(summary.players.map((p) => p.scoreUnits)).toEqual([0, 0, 2]);
+  expect(summary.players.map((p) => p.scoreUnits)).toEqual([0, 0, 100]);
   expect(() => act(act(make(), { type: 'pause' }), { type: 'hint' })).toThrow();
 });
 
@@ -67,16 +67,16 @@ it('moves points between guessers exactly once and reversibly corrects guesses t
   const before = JSON.stringify(game);
   const reassigned = act(game, { type: 'assign', index: 0, player: 2 });
   expect(JSON.stringify(game)).toBe(before);
-  expect(reassigned.players.map((p) => p.scoreUnits)).toEqual([-2, 0, 2]);
+  expect(reassigned.players.map((p) => p.scoreUnits)).toEqual([-100, 0, 100]);
   expect(act(reassigned, { type: 'assign', index: 0, player: 2 })).toBe(
     reassigned,
   );
   game = act(reassigned, { type: 'assign', index: 1, player: 1 });
-  expect(game.players.map((p) => p.scoreUnits)).toEqual([1, 2, 2]);
+  expect(game.players.map((p) => p.scoreUnits)).toEqual([50, 100, 100]);
   game = act(game, { type: 'assign', index: 0, player: null });
-  expect(game.players.map((p) => p.scoreUnits)).toEqual([-1, 2, 0]);
+  expect(game.players.map((p) => p.scoreUnits)).toEqual([-50, 100, 0]);
   game = act(game, { type: 'assign', index: 0, player: 1 });
-  expect(game.players.map((p) => p.scoreUnits)).toEqual([1, 4, 0]); // hint remains in effect
+  expect(game.players.map((p) => p.scoreUnits)).toEqual([50, 200, 0]); // hint remains in effect
   expect(game.entries).toEqual(game.lastEntries);
   expect(decodeGame(encodeGame(game)).players).toEqual(game.players);
 });
@@ -87,7 +87,7 @@ it('reopens the final round when a correction removes the winning score, without
     ...game,
     players: game.players.map((p) => ({
       ...p,
-      scoreUnits: p.id === 1 ? 118 : 0,
+      scoreUnits: p.id === 1 ? 5900 : 0,
     })),
   };
   game = act(act(game, { type: 'guess', player: 1 }), { type: 'next' });
@@ -138,9 +138,9 @@ it('allows per-word hints in an old saved party with its global hint setting off
   const hinted = act(restored, { type: 'hint' });
   expect(decodeGame(encodeGame(hinted)).hintUsed).toBe(true);
   const guessed = act(hinted, { type: 'guess', player: 1 });
-  expect(guessed.players.map((p) => p.scoreUnits)).toEqual([0, 2, 0]);
+  expect(guessed.players.map((p) => p.scoreUnits)).toEqual([0, 100, 0]);
   const next = act(guessed, { type: 'guess', player: 2 });
-  expect(next.players.map((p) => p.scoreUnits)).toEqual([1, 2, 2]);
+  expect(next.players.map((p) => p.scoreUnits)).toEqual([50, 100, 100]);
 });
 
 it('ships real Russian definitions matching game words, with accent and ё normalization', () => {
@@ -208,7 +208,7 @@ it('shows only local available hints, freezes reading time and checkpoints the u
       removeItem() {},
     },
   });
-  expect(restored.game?.players.map((p) => p.scoreUnits)).toEqual([0, 0, 2]);
+  expect(restored.game?.players.map((p) => p.scoreUnits)).toEqual([0, 0, 100]);
 });
 
 it('does not charge for a missing definition or hold the clock', async () => {
@@ -249,6 +249,6 @@ it('preserves historic zero bonuses when moving a legacy guess to another player
   };
   const corrected = act(legacy, { type: 'assign', index: 0, player: 2 });
   expect(corrected.players.map((player) => player.scoreUnits)).toEqual([
-    0, 0, 2,
+    0, 0, 100,
   ]);
 });

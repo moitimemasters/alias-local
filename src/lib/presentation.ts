@@ -1,7 +1,14 @@
-import { getPlayer, type Entry, type GameState } from './game';
+import {
+  POINT_UNITS,
+  entryGuessers,
+  guessAwardUnits,
+  getPlayer,
+  type Entry,
+  type GameState,
+} from './game';
 
 export const formatScore = (units: number) =>
-  (units / 2).toLocaleString('ru-RU');
+  (units / POINT_UNITS).toLocaleString('ru-RU');
 
 export function formatTime(remainingMs: number): string {
   const seconds = Math.ceil(remainingMs / 1000);
@@ -13,10 +20,12 @@ export function describeEntry(game: GameState, entry: Entry): string {
   if (entry.guesser === null) {
     return `${explaining} −1`;
   }
-  const answer =
-    entry.sharedWith === undefined
-      ? `${getPlayer(game, entry.guesser).name} +1`
-      : `${getPlayer(game, entry.guesser).name} +0,5 · ${getPlayer(game, entry.sharedWith).name} +0,5`;
+  const recipients = entryGuessers(entry);
+  const award = formatScore(guessAwardUnits(recipients.length));
+  const answer = recipients
+    .map((id) => `${getPlayer(game, id).name} +${award}`)
+    .join(' · ');
+
   return entry.bonusUnits
     ? `${answer} · ${explaining} +${formatScore(entry.bonusUnits)}`
     : answer;

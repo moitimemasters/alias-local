@@ -4,7 +4,7 @@ import { registerGameTools } from '../lib/webmcp';
 
 afterEach(() => vi.unstubAllGlobals());
 
-it('accepts exactly two distinct eligible players for a tie through the browser tool', async () => {
+it('accepts two or more distinct eligible players for a tie through the browser tool', async () => {
   const tools = new Map<
     string,
     { execute: (input: Record<string, unknown>) => unknown }
@@ -29,17 +29,32 @@ it('accepts exactly two distinct eligible players for a tie through the browser 
       }),
   });
   await controller.initialize();
-  controller.start();
+  controller.start({
+    ...controller.config,
+    names: ['Аня', 'Борис', 'Вера', 'Глеб'],
+  });
   controller.dispatch({ type: 'begin' });
   const cleanup = registerGameTools(controller);
   await Promise.resolve();
   const play = tools.get('play_alias')!;
-  for (const players of [undefined, [1], [1, 2, 3], [1, '2'], [1, 1], [0, 2]]) {
+  for (const players of [undefined, [1], [1, 2, 2], [1, '2'], [1, 1], [0, 2]]) {
     expect(() => play.execute({ action: 'tie', players })).toThrow();
     expect(controller.game?.entries).toHaveLength(0);
   }
   expect(play.execute({ action: 'tie', players: [1, 2] })).toMatchObject({
-    game: { players: [{ score: 0.5 }, { score: 0.5 }, { score: 0.5 }] },
+    game: {
+      players: [{ score: 0.5 }, { score: 0.5 }, { score: 0.5 }, { score: 0 }],
+    },
+  });
+  expect(play.execute({ action: 'tie', players: [1, 2, 3] })).toMatchObject({
+    game: {
+      players: [
+        { score: 1 },
+        { score: 0.83 },
+        { score: 0.83 },
+        { score: 0.33 },
+      ],
+    },
   });
   cleanup();
 });

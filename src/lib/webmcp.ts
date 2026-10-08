@@ -1,5 +1,5 @@
 import type { Controller } from './controller.svelte';
-import { explainerId } from './game';
+import { explainerId, POINT_UNITS } from './game';
 import { formatScore } from './presentation';
 import {
   validateGameConfig,
@@ -54,7 +54,7 @@ export function registerGameTools(initialController: Controller): () => void {
             players: controller.game.players.map((p) => ({
               id: p.id,
               name: p.name,
-              score: p.scoreUnits / 2,
+              score: p.scoreUnits / POINT_UNITS,
               displayScore: formatScore(p.scoreUnits),
             })),
             explainer: explainerId(controller.game),
@@ -127,7 +127,7 @@ export function registerGameTools(initialController: Controller): () => void {
     {
       name: 'play_alias',
       description:
-        'Play the local game: begin, pause/resume, guess (+1 guesser), tie (players: exactly two, +0.5 each), skip (−1 explainer), undo, end or next. The explainer receives +0.5 per guessed word, or 0 after a hint. These tools operate only this device.',
+        'Play the local game: begin, pause/resume, guess (+1 guesser), tie (players: two or more, one point split equally and truncated to hundredths), skip (−1 explainer), undo, end or next. The explainer receives +0.5 per guessed word, or 0 after a hint. These tools operate only this device.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -150,7 +150,7 @@ export function registerGameTools(initialController: Controller): () => void {
             type: 'array',
             items: { type: 'integer' },
             minItems: 2,
-            maxItems: 2,
+            maxItems: MAX_PLAYERS - 1,
             uniqueItems: true,
           },
         },
@@ -190,15 +190,16 @@ export function registerGameTools(initialController: Controller): () => void {
           const players = input.players;
           if (
             !Array.isArray(players) ||
-            players.length !== 2 ||
-            typeof players[0] !== 'number' ||
-            typeof players[1] !== 'number'
+            players.length < 2 ||
+            !players.every(
+              (id: unknown) => typeof id === 'number' && Number.isInteger(id),
+            )
           ) {
-            throw new Error('Нужны два players.');
+            throw new Error('Нужны два или больше players.');
           }
           controller.dispatch({
             type: 'tie',
-            players: [players[0], players[1]],
+            players: players as number[],
           });
         } else if (action === 'resume' && controller.view === 'setup') {
           controller.resume();

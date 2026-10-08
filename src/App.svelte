@@ -48,7 +48,7 @@
     controller.dispatch(
       sharedWith === undefined
         ? { type: 'guess', player }
-        : { type: 'tie', players: [player, sharedWith] },
+        : { type: 'tie', players: [player, ...sharedWith] },
     );
     controller.closePicker();
   }

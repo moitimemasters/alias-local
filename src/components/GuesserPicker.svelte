@@ -1,5 +1,12 @@
 <script lang="ts">
-  import type { Entry, GuesserSelection, Player } from '../lib/game';
+  import {
+    entryGuessers,
+    guessAwardUnits,
+    type Entry,
+    type GuesserSelection,
+    type Player,
+  } from '../lib/game';
+  import { formatScore } from '../lib/presentation';
   import ActionButton from './ActionButton.svelte';
   import { untrack } from 'svelte';
   let {
@@ -17,7 +24,7 @@
   let picks = $state<number[]>(
     untrack(() =>
       selected?.sharedWith !== undefined && selected.guesser !== null
-        ? [selected.guesser, selected.sharedWith]
+        ? entryGuessers(selected)
         : [],
     ),
   );
@@ -29,23 +36,23 @@
     }
     if (picks.includes(id)) {
       picks = picks.filter((pick) => pick !== id);
-    } else if (picks.length < 2) {
+    } else {
       picks = [...picks, id];
     }
   }
   function confirmTie() {
-    const [player, sharedWith] = picks;
-    if (
-      picks.length === 2 &&
-      player !== undefined &&
-      sharedWith !== undefined
-    ) {
+    const [player, ...sharedWith] = picks;
+    if (picks.length >= 2 && player !== undefined) {
       choose({ player, sharedWith });
     }
   }
 </script>
 
-{#if tie}<p class="tie-caption">Выберите двух · каждому +0,5</p>{/if}
+{#if tie}<p class="tie-caption">
+    {picks.length < 2
+      ? 'Выберите угадавших · минимум двоих'
+      : `Выбрано ${picks.length} · каждому +${formatScore(guessAwardUnits(picks.length))}`}
+  </p>{/if}
 <div class="guessers picker">
   {#each players as player (player.id)}
     <ActionButton
@@ -53,14 +60,13 @@
       aria-pressed={tie
         ? picks.includes(player.id)
         : selected?.guesser === player.id}
-      disabled={tie && picks.length === 2 && !picks.includes(player.id)}
       activate={() => pick(player.id)}
     >
       <span class="avatar color-{player.id % 4}">
         {player.name.slice(0, 1).toUpperCase()}
       </span>
       <span>{player.name}</span>
-      <strong>{tie ? (picks.includes(player.id) ? '✓' : '+0,5') : '+1'}</strong>
+      <strong>{tie ? (picks.includes(player.id) ? '✓' : '+') : '+1'}</strong>
     </ActionButton>
   {/each}
 </div>
@@ -77,7 +83,7 @@
     </ActionButton>
     <ActionButton
       class="primary"
-      disabled={picks.length !== 2}
+      disabled={picks.length < 2}
       activate={confirmTie}
     >
       Засчитать ничью
