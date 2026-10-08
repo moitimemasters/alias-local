@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { touchActivation } from '../lib/touch-attachment';
+  import { untrack } from 'svelte';
   import { explainer, guessers, isActive, type GameState } from '../lib/game';
   import { formatTime } from '../lib/presentation';
   import { WordGesture } from '../lib/word-gesture';
@@ -6,6 +8,7 @@
   import type { Controller } from '../lib/controller.svelte';
   import Scoreboard from './Scoreboard.svelte';
   import Icon from './Icon.svelte';
+  import WordHistory from './WordHistory.svelte';
   import ActionButton from './ActionButton.svelte';
   let {
     controller,
@@ -23,6 +26,14 @@
     game.phase === 'lastword' || (paused && game.resumePhase === 'lastword'),
   );
   let seconds = $derived(Math.ceil(game.remainingMs / 1000));
+  let historyOpen = $state(false);
+  $effect(() => {
+    if (historyOpen) {
+      untrack(() => controller.hold('history'));
+      return () => controller.release('history');
+    }
+    return undefined;
+  });
   const gesture = new WordGesture();
   const cardTap = new TouchTap();
 
@@ -71,7 +82,7 @@
   }
 </script>
 
-<div class="play-view">
+<div class="play-view" class:history-open={historyOpen}>
   <div class="turn-heading">
     <div>
       <span class="eyebrow">
@@ -147,6 +158,7 @@
       class="guesser-panel"
       class:many-players={eligiblePlayers.length > 6}
       class:compact-picker={eligiblePlayers.length > 4}
+      class:short-picker={eligiblePlayers.length > 2}
     >
       <h2>Кто угадал?</h2>
       <ActionButton
@@ -176,6 +188,30 @@
         <p class="functional-note">Доиграйте это слово без таймера.</p>
       {/if}
     </div>
+  </div>
+  <div class="turn-tools">
+    {#if game.config.hints}
+      <ActionButton
+        class="secondary hint-button"
+        disabled={paused || !controller.hintAvailable}
+        title={controller.hintAvailable
+          ? undefined
+          : 'В локальном словаре нет определения'}
+        activate={controller.openHint}
+      >
+        {!controller.hintAvailable
+          ? 'Нет подсказки'
+          : game.hintUsed
+            ? 'Подсказка · +0'
+            : 'Подсказка'}
+      </ActionButton>
+    {/if}
+    <details class="round-history" bind:open={historyOpen}>
+      <summary {@attach touchActivation}>
+        Слова хода · {game.entries.length}
+      </summary>
+      <WordHistory {game} entries={game.entries} />
+    </details>
   </div>
   <div class="play-actions">
     <ActionButton

@@ -15,9 +15,14 @@ import {
   encodeGame,
   SAVE_KEY,
   CONFIG_KEY,
-  LEGACY_KEY,
   type LocalStorage,
 } from './persistence';
+import {
+  loadDefinitions,
+  normalizeWord,
+  type Definitions,
+  type Definition,
+} from './definitions';
 import { defaultConfig, MIN_PLAYERS, MAX_PLAYERS } from './config';
 import {
   collectWords,
@@ -29,11 +34,13 @@ interface ControllerOptions {
   storage?: LocalStorage;
   now?: () => number;
   loadWords?: typeof loadDictionaries;
+  loadHints?: typeof loadDefinitions;
 }
 
 export function createController(options: ControllerOptions = {}) {
   const now = options.now ?? (() => performance.now());
   const loadWords = options.loadWords ?? loadDictionaries;
+  const loadHints = options.loadHints ?? loadDefinitions;
   let storage: LocalStorage | undefined;
   let storageError = '';
   try {
@@ -52,6 +59,8 @@ export function createController(options: ControllerOptions = {}) {
   let message = $state('');
   let loading = $state(true);
   let picker = $state(false);
+  let definitions = $state.raw<Definitions | null>(null);
+  let hint = $state.raw<Definition | null>(null);
   const clock = new TurnClock(
     () => view === 'game' && game?.phase === 'playing',
     (ms) => {
@@ -71,12 +80,7 @@ export function createController(options: ControllerOptions = {}) {
         throw new Error('Хранилище недоступно.');
       }
       if (game && game !== savedGame) {
-        if (game.phase === 'finished') {
-          storage.removeItem(SAVE_KEY);
-          storage.removeItem(LEGACY_KEY);
-        } else {
-          storage.setItem(SAVE_KEY, encodeGame(game));
-        }
+        storage.setItem(SAVE_KEY, encodeGame(game));
         savedGame = game;
       }
       const preferences = JSON.stringify(config);
@@ -102,13 +106,17 @@ export function createController(options: ControllerOptions = {}) {
       clock.reset();
       error = '';
       if (action.type === 'guess') {
-        message = `${getPlayer(game, action.player).name} +1 · ${explainer(game).name} +0,5`;
+        const entry = game.entries.at(-1);
+        message = `${getPlayer(game, action.player).name} +1${entry?.bonusUnits ? ` · ${explainer(game).name} +0,5` : ''}`;
       } else if (action.type === 'skip') {
         message = `${explainer(game).name} −1`;
       } else if (action.type === 'undo') {
         message = 'Действие отменено';
       } else {
         message = '';
+      }
+      if (action.type !== 'hint') {
+        closeHint();
       }
       if (game.phase === 'summary' || game.phase === 'finished') {
         closePicker();
@@ -117,6 +125,28 @@ export function createController(options: ControllerOptions = {}) {
     } catch (e) {
       error = e instanceof Error ? e.message : 'Не удалось выполнить действие.';
     }
+  }
+
+  function closeHint() {
+    hint = null;
+    clock.release('hint');
+  }
+
+  function openHint() {
+    if (
+      !game?.config.hints ||
+      !game.word ||
+      !['playing', 'lastword'].includes(game.phase)
+    ) {
+      return;
+    }
+    const definition = definitions?.[normalizeWord(game.word)];
+    if (!definition) {
+      return;
+    }
+    clock.hold('hint');
+    dispatch({ type: 'hint' });
+    hint = definition;
   }
 
   function closePicker() {
@@ -143,6 +173,7 @@ export function createController(options: ControllerOptions = {}) {
       error = '';
       message = '';
       closePicker();
+      closeHint();
       clock.clearInputHolds();
       save();
     } catch (e) {
@@ -198,6 +229,7 @@ export function createController(options: ControllerOptions = {}) {
       game = reduceGame(game, { type: 'pause' });
     }
     closePicker();
+    closeHint();
     clock.clearInputHolds();
     return save();
   }
@@ -225,7 +257,15 @@ export function createController(options: ControllerOptions = {}) {
   async function initialize() {
     loading = true;
     try {
-      dictionaries = await loadWords();
+      const [words, hints] = await Promise.allSettled([
+        loadWords(),
+        loadHints(),
+      ]);
+      if (words.status === 'rejected') {
+        throw words.reason;
+      }
+      dictionaries = words.value;
+      definitions = hints.status === 'fulfilled' ? hints.value : null;
       if (error.startsWith('Не удалось загрузить слова.')) {
         error = '';
       }
@@ -280,6 +320,15 @@ export function createController(options: ControllerOptions = {}) {
     get loading() {
       return loading;
     },
+    get definitions() {
+      return definitions;
+    },
+    get hint() {
+      return hint;
+    },
+    get hintAvailable() {
+      return !!game?.word && !!definitions?.[normalizeWord(game.word)];
+    },
     get picker() {
       return picker;
     },
@@ -292,6 +341,8 @@ export function createController(options: ControllerOptions = {}) {
     resume,
     menu,
     dispatch,
+    openHint,
+    closeHint,
     openPicker,
     closePicker,
     pauseForBackground,

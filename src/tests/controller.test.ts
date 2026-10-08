@@ -21,6 +21,7 @@ function harness() {
   };
   const controller = createController({
     storage,
+    loadHints: () => Promise.resolve({}),
     now: () => now,
     loadWords: () =>
       Promise.resolve({

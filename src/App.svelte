@@ -283,3 +283,37 @@
     </div>
   </Dialog>
 {/if}
+
+{#if controller.hint && controller.game}
+  <Dialog
+    title={controller.game.word ?? 'Подсказка'}
+    close={controller.closeHint}
+  >
+    <ol class="hint-meanings">
+      {#each controller.hint.meanings as meaning (meaning)}
+        <li>{meaning}</li>
+      {/each}
+    </ol>
+    <p class="functional-note">За это слово объясняющему +0, угадавшему +1.</p>
+    <p class="source-link">
+      <a
+        href={`https://ru.wiktionary.org/wiki/${encodeURIComponent(controller.hint.word)}`}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Викисловарь
+      </a>
+      ·
+      <a
+        href="https://creativecommons.org/licenses/by-sa/4.0/"
+        target="_blank"
+        rel="noreferrer"
+      >
+        CC BY-SA 4.0
+      </a>
+    </p>
+    <ActionButton class="primary hint-continue" activate={controller.closeHint}>
+      Продолжить
+    </ActionButton>
+  </Dialog>
+{/if}

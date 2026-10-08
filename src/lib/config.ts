@@ -9,6 +9,7 @@ export const MAX_NAME_LENGTH = 24;
 
 export type PackId = (typeof PACK_IDS)[number];
 export interface Config {
+  hints?: boolean;
   names: string[];
   packs: PackId[];
   seconds: (typeof TURN_SECONDS)[number];
@@ -17,6 +18,7 @@ export interface Config {
 
 export function defaultConfig(): Config {
   return {
+    hints: false,
     names: ['Игрок 1', 'Игрок 2', 'Игрок 3'],
     packs: ['fresh'],
     seconds: 60,
@@ -35,6 +37,7 @@ export function validConfig(value: unknown): value is Config {
   }
 
   return (
+    (value.hints === undefined || typeof value.hints === 'boolean') &&
     Array.isArray(value.names) &&
     value.names.length >= MIN_PLAYERS &&
     value.names.length <= MAX_PLAYERS &&
@@ -68,5 +71,10 @@ export function validateGameConfig(value: unknown): Config {
     throw new Error('Выберите хотя бы один словарь.');
   }
 
-  return { ...value, names, packs: [...value.packs] };
+  return {
+    ...value,
+    hints: value.hints ?? false,
+    names,
+    packs: [...value.packs],
+  };
 }

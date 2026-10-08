@@ -16,6 +16,7 @@ it.each([false, true])(
       },
     });
     const controller = createController({
+      loadHints: () => Promise.resolve({}),
       storage: { getItem: () => null, setItem() {}, removeItem() {} },
     });
     const cleanup = registerGameTools(controller);
@@ -45,6 +46,7 @@ it('reuses registered tools after remount and forwards them to the current party
   vi.stubGlobal('document', { modelContext: { registerTool } });
   const makeController = () =>
     createController({
+      loadHints: () => Promise.resolve({}),
       storage: { getItem: () => null, setItem() {}, removeItem() {} },
       loadWords: () =>
         Promise.resolve({

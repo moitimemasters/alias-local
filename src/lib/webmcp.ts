@@ -63,6 +63,8 @@ export function registerGameTools(initialController: Controller): () => void {
             target: controller.game.config.target,
             turn: controller.game.turn,
             interactionPaused: controller.held,
+            hintUsed: controller.game.hintUsed,
+            hintAvailable: controller.hintAvailable,
           }
         : null,
     };
@@ -75,6 +77,7 @@ export function registerGameTools(initialController: Controller): () => void {
       inputSchema: {
         type: 'object',
         properties: {
+          hints: { type: 'boolean' },
           names: {
             type: 'array',
             items: { type: 'string', minLength: 1, maxLength: MAX_NAME_LENGTH },
@@ -98,6 +101,7 @@ export function registerGameTools(initialController: Controller): () => void {
       execute: (input) => {
         const controller = activeController();
         const config = validateGameConfig({
+          hints: input.hints ?? controller.config.hints ?? false,
           names: input.names,
           packs: input.packs ?? controller.config.packs,
           seconds: input.seconds ?? controller.config.seconds,

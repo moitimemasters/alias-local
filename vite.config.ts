@@ -14,6 +14,8 @@ export default defineConfig({
         'icon-512.png',
         'apple-touch-icon.png',
         'dictionaries.json',
+        'definitions.json',
+        'definition-sources.json',
       ],
       manifest: {
         name: 'Алиас',
@@ -48,7 +50,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,json,webmanifest}'],
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
       },

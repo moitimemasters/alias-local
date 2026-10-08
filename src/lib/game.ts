@@ -14,6 +14,7 @@ export interface Entry {
   guesser: number | null;
   explainer: number;
   bonusUnits: number;
+  hinted?: boolean;
 }
 
 export type Phase =
@@ -28,15 +29,27 @@ export interface GameState {
   resumePhase: 'playing' | 'lastword';
   remainingMs: number;
   word: string | null;
+  hintUsed: boolean;
   entries: Entry[];
   lastEntries: Entry[];
   exhausted: boolean;
 }
 
 export type Action =
-  | { type: 'begin' | 'pause' | 'resume' | 'skip' | 'undo' | 'end' | 'next' }
+  | {
+      type:
+        | 'begin'
+        | 'pause'
+        | 'resume'
+        | 'skip'
+        | 'undo'
+        | 'end'
+        | 'next'
+        | 'hint';
+    }
   | { type: 'guess'; player: number }
-  | { type: 'elapse'; ms: number };
+  | { type: 'elapse'; ms: number }
+  | { type: 'assign'; index: number; player: number | null };
 export const explainerId = (game: GameState) => game.turn % game.players.length;
 export function isActive(
   game: GameState,
@@ -100,6 +113,7 @@ export function createGame(
     resumePhase: 'playing',
     remainingMs: config.seconds * 1000,
     word: null,
+    hintUsed: false,
     entries: [],
     lastEntries: [],
     exhausted: false,
@@ -111,13 +125,14 @@ function finish(game: GameState): GameState {
     ...game,
     phase: 'summary',
     word: null,
+    hintUsed: false,
     lastEntries: [...game.entries],
   };
 }
 
 function draw(game: GameState): GameState {
   const word = game.deck.at(-1) ?? null;
-  const next = { ...game, word, deck: game.deck.slice(0, -1) };
+  const next = { ...game, word, hintUsed: false, deck: game.deck.slice(0, -1) };
   return word ? next : finish({ ...next, exhausted: true });
 }
 
@@ -188,6 +203,12 @@ export function reduceGame(game: GameState, action: Action): GameState {
     case 'resume':
       requirePhase(game, 'paused');
       return { ...game, phase: game.resumePhase };
+    case 'hint':
+      requirePhase(game, 'playing', 'lastword');
+      if (!game.config.hints || !game.word) {
+        throw new Error('Подсказки недоступны.');
+      }
+      return game.hintUsed ? game : { ...game, hintUsed: true };
     case 'guess':
     case 'skip': {
       requirePhase(game, 'playing', 'lastword');
@@ -208,7 +229,8 @@ export function reduceGame(game: GameState, action: Action): GameState {
         word: game.word,
         guesser,
         explainer,
-        bonusUnits: guesser === null ? 0 : 1,
+        bonusUnits: guesser === null || game.hintUsed ? 0 : 1,
+        hinted: game.hintUsed,
       };
       const next = {
         ...game,
@@ -230,8 +252,49 @@ export function reduceGame(game: GameState, action: Action): GameState {
         players: changedScores(game, entry, -1),
         entries: game.entries.slice(0, -1),
         word: entry.word,
+        hintUsed: entry.hinted ?? false,
         deck: game.word ? [...game.deck, game.word] : game.deck,
       };
+    }
+    case 'assign': {
+      requirePhase(game, 'summary', 'finished');
+      const entry = game.lastEntries[action.index];
+      if (
+        !Number.isInteger(action.index) ||
+        !entry ||
+        (action.player !== null &&
+          (!Number.isInteger(action.player) ||
+            !game.players[action.player] ||
+            action.player === entry.explainer))
+      ) {
+        throw new Error('Выберите угадавшего игрока.');
+      }
+      if (entry.guesser === action.player) {
+        return game;
+      }
+      const corrected: Entry = {
+        ...entry,
+        guesser: action.player,
+        bonusUnits:
+          action.player === null || entry.hinted
+            ? 0
+            : entry.guesser === null
+              ? 1
+              : entry.bonusUnits,
+      };
+      const reversed = { ...game, players: changedScores(game, entry, -1) };
+      const entries = game.lastEntries.map((item, index) =>
+        index === action.index ? corrected : item,
+      );
+      const next = {
+        ...game,
+        players: changedScores(reversed, corrected, 1),
+        entries,
+        lastEntries: entries,
+      };
+      return game.phase === 'finished' && !game.exhausted && !reachedGoal(next)
+        ? { ...next, phase: 'summary', turn: game.turn - 1 }
+        : next;
     }
     case 'end':
       requirePhase(game, 'playing', 'lastword', 'paused');

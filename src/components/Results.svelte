@@ -1,12 +1,25 @@
 <script lang="ts">
+  import { touchActivation } from '../lib/touch-attachment';
   import ActionButton from './ActionButton.svelte';
   import { explainer, ranked, reachedGoal, type GameState } from '../lib/game';
-  import { formatScore, describeEntry } from '../lib/presentation';
+  import { formatScore } from '../lib/presentation';
   import type { Controller } from '../lib/controller.svelte';
   import Scoreboard from './Scoreboard.svelte';
   import Icon from './Icon.svelte';
+  import WordHistory from './WordHistory.svelte';
+  import Dialog from './Dialog.svelte';
+  let editing = $state<number | null>(null);
+  function assign(player: number | null) {
+    if (editing !== null) {
+      controller.dispatch({ type: 'assign', index: editing, player });
+      editing = null;
+    }
+  }
   let { controller, game }: { controller: Controller; game: GameState } =
     $props();
+  const selectedEntry = $derived(
+    editing === null ? undefined : game.lastEntries[editing],
+  );
   let finished = $derived(game.phase === 'finished');
   let leaders = $derived(ranked(game));
   const leader = $derived(leaders[0]);
@@ -46,19 +59,16 @@
     </div>
   {/if}
   <Scoreboard {game} full />
-  {#if !finished && game.lastEntries.length}
-    <details>
-      <summary>Слова этого хода</summary>
-      <div class="turn-log">
-        {#each game.lastEntries as entry, index (index)}
-          <div>
-            <span>{entry.word}</span>
-            <small>
-              {describeEntry(game, entry)}
-            </small>
-          </div>
-        {/each}
-      </div>
+  {#if game.lastEntries.length}
+    <details class="results-history" open>
+      <summary {@attach touchActivation}>Слова этого хода</summary>
+      <WordHistory
+        {game}
+        entries={game.lastEntries}
+        edit={(index: number) => {
+          editing = index;
+        }}
+      />
     </details>
   {/if}
   {#if game.exhausted}
@@ -76,3 +86,30 @@
         : 'Следующий игрок'}<Icon name="arrow" />
   </ActionButton>
 </section>
+
+{#if selectedEntry && editing !== null}
+  <Dialog
+    title={`Кто угадал «${selectedEntry.word}»?`}
+    close={() => (editing = null)}
+    initialFocus="action"
+  >
+    <div class="guessers picker">
+      {#each game.players.filter((player) => player.id !== selectedEntry.explainer) as player (player.id)}
+        <ActionButton
+          class="guesser"
+          aria-pressed={selectedEntry.guesser === player.id}
+          activate={() => assign(player.id)}
+        >
+          {player.name}
+        </ActionButton>
+      {/each}
+    </div>
+    <ActionButton
+      class="secondary correction-skip"
+      aria-pressed={selectedEntry.guesser === null}
+      activate={() => assign(null)}
+    >
+      Пропущено · −1 объясняющему
+    </ActionButton>
+  </Dialog>
+{/if}

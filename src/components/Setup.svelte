@@ -25,11 +25,15 @@
       {controller.config.names.length <= 4 ? 'игрока' : 'игроков'}
     </span>
   </div>
-  {#if controller.game && controller.game.phase !== 'finished'}
+  {#if controller.game}
     <ActionButton class="resume-card" activate={controller.resume}>
       <span class="resume-icon"><Icon name="play" size={24} /></span>
       <span>
-        <strong>Продолжить игру</strong>
+        <strong>
+          {controller.game.phase === 'finished'
+            ? 'Результаты игры'
+            : 'Продолжить игру'}
+        </strong>
         <small>
           {controller.game.players
             .map((p) => `${p.name}: ${formatScore(p.scoreUnits)}`)
@@ -118,6 +122,17 @@
           </label>
         {/each}
       </div>
+      <label class="hint-option">
+        <input
+          type="checkbox"
+          bind:checked={controller.config.hints}
+          onchange={controller.savePreferences}
+        />
+        <span>
+          <strong>Подсказки</strong>
+          <small>Определение слова без +0,5 объясняющему</small>
+        </span>
+      </label>
       <div class="option-row">
         <h3>Время на ход</h3>
         <div class="segments">

@@ -33,8 +33,10 @@ function isEntries(value: unknown, playerCount: number): value is Entry[] {
       if (!isRecord(entry)) {
         return false;
       }
-      const { word, explainer, guesser, bonusUnits } = entry;
+      const { word, explainer, guesser, bonusUnits, hinted } = entry;
       return (
+        (hinted === undefined || typeof hinted === 'boolean') &&
+        (!hinted || bonusUnits === 0) &&
         isWord(word) &&
         typeof explainer === 'number' &&
         Number.isInteger(explainer) &&
@@ -77,6 +79,7 @@ function validate(value: unknown): GameState {
     lastEntries,
     exhausted,
   } = value;
+  const hintUsed = value.hintUsed === undefined ? false : value.hintUsed;
   if (
     !Array.isArray(players) ||
     players.length !== config.names.length ||
@@ -96,6 +99,8 @@ function validate(value: unknown): GameState {
     remainingMs < 0 ||
     remainingMs > config.seconds * 1000 ||
     typeof exhausted !== 'boolean' ||
+    typeof hintUsed !== 'boolean' ||
+    (hintUsed && (!config.hints || phase !== 'paused')) ||
     (resumePhase !== 'playing' && resumePhase !== 'lastword') ||
     (phase !== 'ready' &&
       phase !== 'paused' &&
@@ -125,6 +130,7 @@ function validate(value: unknown): GameState {
     players,
     deck,
     word,
+    hintUsed,
     turn,
     phase,
     resumePhase,
